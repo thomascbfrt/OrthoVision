@@ -1,38 +1,30 @@
 # OrthoVision
 
-Prototype web pour explorer des images radiographiques. Cette première version permet d'ouvrir et d'afficher une image PNG ou JPEG dans le navigateur.
+Visionneuse pédagogique de radiographies, en TypeScript sans framework. Les fichiers image importés sont traités dans le navigateur. Le prototype est destiné à l’enseignement et à la recherche et ne doit pas être utilisé pour une décision médicale.
 
-**Projet expérimental : ne pas utiliser pour un diagnostic ou une décision médicale.**
+## Démarrer
 
-## Lancer le projet
-
-Il faut installer Node.js sur son ordinateur, puis ouvrir un terminal dans le dossier du projet :
+Avec Node.js 22.18 ou ultérieur :
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Ouvrir ensuite l'adresse indiquée dans le terminal. Pour vérifier et construire le projet : `npm run build`.
+Ouvrir l’adresse affichée dans le terminal. Pour un premier essai, cliquer sur **Ouvrir les exemples**. Deux radiographies JPEG de la même colonne avant et après intervention sont conservées dans [public/examples](public/examples) et servies avec l’application. Voir les [sources et droits de réutilisation](public/examples/sources.txt).
 
-## Ce qui fonctionne
+## Utiliser la visionneuse
 
-- Import d'un fichier PNG ou JPEG et affichage sans déformation.
-- Affichage du nom du fichier et des dimensions de l'image.
-- Le fichier reste dans le navigateur : cette version ne l'envoie à aucun serveur.
+- Ouvrir un PNG ou un JPEG, puis poser quatre points pour tracer deux plateaux vertébraux. Les points restent dans le repère de l’image et peuvent être déplacés après un zoom. Le logiciel affiche le plus petit angle entre les deux droites, de 0 à 90°.
+- Exporter le PNG annoté ou les repères JSON. Pour rouvrir des repères, ouvrir d’abord le même fichier image, puis importer le JSON.
+- Ouvrir un deuxième examen pour comparer les angles et exporter un rapport via la boîte d’impression du navigateur. L’écart affiché est descriptif : projection, positionnement, cadrage et choix des vertèbres influencent les mesures.
 
-Aucune radiographie n'est incluse : utiliser une image que vous êtes autorisé à employer, de préférence sans données personnelles.
 
-## Prochaines étapes
+## Vérifier et héberger
 
-Ajouter progressivement les annotations et les mesures manuelles, puis étudier l'intégration facultative du modèle FleXray. Il n'y a pas encore de mesure, de segmentation, de stockage ni d'intelligence artificielle dans ce prototype.
+```bash
+npm run build
+npm run preview
+```
 
-## Organisation
-
-- `index.html` : contenu de la page.
-- `src/style.css` : apparence.
-- `src/main.ts` : connexion entre l'interface et les actions.
-- `src/viewer.ts` : ouverture et vérification de l'image.
-- `docs/flexray.md` : premières vérifications sur le modèle.
-
-Ce code est distinct du projet FleXray : aucun de ses poids ou de ses fichiers n'est inclus.
+Le dossier `dist/` est autonome pour les outils manuels. Sur Vercel, importer le dépôt, choisir **Vite**, utiliser `npm run build` et le dossier de sortie `dist`. Servir l’application en HTTPS en dehors de localhost.

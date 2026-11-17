@@ -1,0 +1,11 @@
+Images de démonstration OrthoVision
+
+spine-before.jpg — Wiki pre-op.jpg, Silverjonny (Wikimedia Commons), domaine public.
+https://commons.wikimedia.org/wiki/File:Wiki_pre-op.jpg
+
+spine-after.jpg — Wiki post-op.jpg, Silverjonny (Wikimedia Commons), domaine public.
+https://commons.wikimedia.org/wiki/File:Wiki_post-op.jpg
+
+Les métadonnées EXIF ont été retirées. Les images sont fournies en JPEG.
+Deux projections du même cas, à des moments différents. Leur orientation et
+leur cadrage peuvent différer. Images fournies pour essayer les outils.

@@ -25,6 +25,7 @@ Les exemples et les outils manuels ne nécessitent aucun accès à Hugging Face.
 ## Vérifier et héberger
 
 ```bash
+npm test
 npm run build
 npm run preview
 ```

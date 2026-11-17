@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111c29" />
+  <title>OrthoVision</title>
+</head>
+<body>
+  <header><div class="brand"><span class="logo">O</span><strong>OrthoVision</strong><span class="badge">Prototype</span></div><span class="header-note">Imagerie & recherche</span></header>
+  <main>
+    <div class="intro"><div><p class="eyebrow">ESPACE DE VISUALISATION</p><h1>Votre image, en détail.</h1><p>Importez une image pour commencer à explorer le prototype.</p></div><label class="button" for="image-input">Importer une image</label><input id="image-input" type="file" accept="image/png,image/jpeg" /></div>
+    <div class="workspace">
+      <section class="viewer-panel" aria-label="Visualisation de l'image">
+        <div class="panel-header"><span>VISUALISATION</span><span id="image-name">Aucune image</span></div>
+        <div class="viewer"><div id="placeholder" class="placeholder"><div class="placeholder-icon">✳</div><strong>Aucune image importée</strong><p>Sélectionnez un fichier PNG ou JPEG<br />pour l’afficher ici.</p><label for="image-input">Choisir une image →</label></div><img id="image" alt="Image importée" hidden /></div>
+        <div class="viewer-footer"><span id="image-size">—</span><span>PNG ou JPEG</span></div>
+      </section>
+      <aside class="side-panel"><p class="eyebrow">OUTILS</p><h2>Mesures</h2><p class="description">Les outils de mesure seront ajoutés dans une prochaine étape.</p><div class="coming"><span>↗</span><div><strong>Angle de Cobb</strong><small>À venir</small></div></div><div class="divider"></div><p class="eyebrow">RÉSULTATS</p><p class="description">Aucune mesure pour le moment.</p><div class="info"><strong>Projet expérimental</strong><p>Destiné à l’apprentissage et à la recherche. Ne pas utiliser pour un diagnostic ou une décision médicale.</p></div></aside>
+    </div>
+    <p id="message" class="message" role="status" aria-live="polite"></p><footer>OrthoVision · Première version</footer>
+  </main>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

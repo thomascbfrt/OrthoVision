@@ -1,6 +1,9 @@
 import { annotationData, download, imageHash, readPoints, type ExamImage } from './exam.ts';
 import { cobbAngle, formatAngle } from './measurements.ts';
 import { annotatedPng, createViewer } from './viewer.ts';
+import type { Segmentation } from './flexray.ts';
+
+let modelBusy = false;
 
 export function setupExam(element: HTMLElement, title: string, onChange: () => void) {
   function find<T extends Element>(selector: string) {
@@ -8,11 +11,17 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
   }
   const viewer = createViewer(find<SVGSVGElement>('.viewer'), updateResult);
   const status = find<HTMLElement>('.status');
+  const aiStatus = find<HTMLElement>('.ai-status');
   const result = find<HTMLElement>('.result');
   const coordinates = find<HTMLElement>('.coordinates');
+  const select = find<HTMLSelectElement>('.structures select');
+  const opacity = find<HTMLInputElement>('.opacity input');
+  const segment = find<HTMLButtonElement>('.segment');
   const pan = find<HTMLButtonElement>('.pan');
   let image: HTMLImageElement | undefined;
   let examImage: ExamImage | undefined;
+  let segmentation: Segmentation | undefined;
+  let mask: HTMLCanvasElement | null = null;
   let loadId = 0;
   find('h2').textContent = title;
 
@@ -38,12 +47,17 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
       const previous = image;
       image = next;
       examImage = { name, width: next.naturalWidth, height: next.naturalHeight, sha256 };
+      segmentation = undefined;
+      mask = null;
+      find<HTMLElement>('.structures').hidden = true;
+      find<HTMLElement>('.opacity').hidden = true;
+      aiStatus.textContent = '';
       status.textContent = '';
       find('.image-info').textContent = `${name} · ${examImage.width} × ${examImage.height} px`;
       viewer.setImage(url, examImage);
       viewer.setPan(false);
       pan.setAttribute('aria-pressed', 'false');
-      for (const selector of ['.view-controls', '.instruction', '.exports']) {
+      for (const selector of ['.view-controls', '.instruction', '.exports', '.ai']) {
         find<HTMLElement>(selector).hidden = false;
       }
       if (previous) URL.revokeObjectURL(previous.src);
@@ -98,9 +112,65 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
   find<HTMLButtonElement>('.png').onclick = async () => {
     if (!image) return;
     try {
-      download(await annotatedPng(image, viewer.points), `orthovision-${title.at(-1)}.png`);
+      download(await annotatedPng(image, viewer.points, mask, Number(opacity.value) / 100), `orthovision-${title.at(-1)}.png`);
     } catch {
       status.textContent = 'Impossible d’exporter le PNG.';
+    }
+  };
+
+  function updateOpacity() {
+    if (mask) viewer.setMask(mask.toDataURL(), Number(opacity.value) / 100);
+  }
+
+  async function selectMask() {
+    const current = segmentation;
+    const selected = select.value;
+    if (!current) return;
+    if (selected === '') {
+      mask = null;
+      viewer.setMask('', 0);
+      return;
+    }
+    const { drawMask } = await import('./flexray.ts');
+    if (segmentation !== current || select.value !== selected) return;
+    mask = drawMask(current, Number(selected));
+    updateOpacity();
+  }
+
+  opacity.oninput = updateOpacity;
+  select.onchange = selectMask;
+  segment.onclick = async () => {
+    const target = image;
+    if (!target) return;
+    if (modelBusy) {
+      aiStatus.textContent = 'Une autre segmentation est en cours.';
+      return;
+    }
+    modelBusy = true;
+    segment.disabled = true;
+    try {
+      const { segmentImage } = await import('./flexray.ts');
+      const prediction = await segmentImage(target, message => {
+        if (image === target) aiStatus.textContent = message;
+      });
+      if (image !== target) return;
+      segmentation = prediction;
+      select.replaceChildren(new Option('Masquer', ''), new Option('Toutes les vertèbres', '-1'));
+      prediction.labels.forEach((label, index) => {
+        if (!index) return;
+        const name = label.startsWith('vertebra_') ? `Vertèbre ${label.slice(9).toUpperCase()}` : label.replaceAll('_', ' ');
+        select.add(new Option(name, String(index)));
+      });
+      select.value = '-1';
+      find<HTMLElement>('.structures').hidden = false;
+      find<HTMLElement>('.opacity').hidden = false;
+      await selectMask();
+      if (image === target) aiStatus.textContent = `Masques FleXray (${prediction.provider}). Les points de Cobb se placent à la main.`;
+    } catch (error) {
+      if (image === target) aiStatus.textContent = (error as Error).message;
+    } finally {
+      modelBusy = false;
+      segment.disabled = false;
     }
   };
 

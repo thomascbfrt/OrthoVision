@@ -5,6 +5,7 @@ const colors = ['#7aedcc', '#ffcf65'];
 
 export function createViewer(svg: SVGSVGElement, onChange: () => void) {
   const image = svg.querySelector<SVGImageElement>('.radiograph')!;
+  const overlay = svg.querySelector<SVGImageElement>('.overlay')!;
   const marks = svg.querySelector<SVGGElement>('.marks')!;
   let width = 0;
   let height = 0;
@@ -113,15 +114,21 @@ export function createViewer(svg: SVGSVGElement, onChange: () => void) {
   return {
     setImage(url: string, size: { width: number; height: number }) {
       ({ width, height } = size);
-      for (const layer of [image]) {
+      for (const layer of [image, overlay]) {
         layer.setAttribute('width', String(width));
         layer.setAttribute('height', String(height));
         layer.setAttribute('preserveAspectRatio', 'none');
       }
       image.setAttribute('href', url);
+      overlay.removeAttribute('href');
       svg.dataset.ready = '';
       reset();
       setPoints([]);
+    },
+    setMask(url: string, opacity: number) {
+      if (url) overlay.setAttribute('href', url);
+      else overlay.removeAttribute('href');
+      overlay.setAttribute('opacity', String(opacity));
     },
     setPan(enabled: boolean) {
       pan = enabled;
@@ -134,12 +141,17 @@ export function createViewer(svg: SVGSVGElement, onChange: () => void) {
   };
 }
 
-export function annotatedPng(image: HTMLImageElement, points: readonly Point[]) {
+export function annotatedPng(image: HTMLImageElement, points: readonly Point[], mask: HTMLCanvasElement | null, opacity: number) {
   const canvas = document.createElement('canvas');
   canvas.width = image.naturalWidth;
   canvas.height = image.naturalHeight;
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(image, 0, 0);
+  if (mask) {
+    ctx.globalAlpha = opacity;
+    ctx.drawImage(mask, 0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = 1;
+  }
   const radius = Math.max(canvas.width, canvas.height) / 105;
   ctx.lineWidth = Math.max(2, radius / 2);
   for (let index = 0; index < points.length; index += 2) {

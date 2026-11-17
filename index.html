@@ -32,6 +32,7 @@
       <p class="image-info">Aucune image ouverte</p>
       <svg class="viewer" role="img" aria-label="Radiographie et repères de mesure" xmlns="http://www.w3.org/2000/svg">
         <image class="radiograph"></image>
+        <image class="overlay" pointer-events="none"></image>
         <g class="marks"></g>
       </svg>
       <div class="controls view-controls" hidden>
@@ -50,6 +51,13 @@
         <button class="json">Exporter les repères JSON</button>
         <button class="png">Exporter le PNG annoté</button>
       </div>
+      <div class="controls ai" hidden>
+        <button class="segment">Afficher les masques FleXray</button>
+        <small>Premier chargement : 203 Mo · usage non commercial.</small>
+        <label class="structures" hidden>Structure <select></select></label>
+        <label class="opacity" hidden>Opacité <input type="range" min="0" max="100" value="45"></label>
+      </div>
+      <p class="ai-status" role="status"></p>
       <p class="status" role="status"></p>
     </section>
   </template>

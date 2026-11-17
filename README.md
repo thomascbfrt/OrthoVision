@@ -18,7 +18,9 @@ Ouvrir l’adresse affichée dans le terminal. Pour un premier essai, cliquer su
 - Ouvrir un PNG ou un JPEG, puis poser quatre points pour tracer deux plateaux vertébraux. Les points restent dans le repère de l’image et peuvent être déplacés après un zoom. Le logiciel affiche le plus petit angle entre les deux droites, de 0 à 90°.
 - Exporter le PNG annoté ou les repères JSON. Pour rouvrir des repères, ouvrir d’abord le même fichier image, puis importer le JSON.
 - Ouvrir un deuxième examen pour comparer les angles et exporter un rapport via la boîte d’impression du navigateur. L’écart affiché est descriptif : projection, positionnement, cadrage et choix des vertèbres influencent les mesures.
+- Sur une radiographie, **Afficher les masques FleXray** propose une segmentation locale en option. Au premier usage, le navigateur charge environ 203 Mo de poids depuis Hugging Face. Choisir une structure et régler son opacité. La mesure de Cobb et le choix des repères restent manuels.
 
+Les exemples et les outils manuels ne nécessitent aucun accès à Hugging Face. L’IRM et le format DICOM ne sont pas pris en charge. FleXray a été entraîné pour des radiographies conventionnelles. Voir sa [fiche d’intégration](docs/flexray.md).
 
 ## Vérifier et héberger
 

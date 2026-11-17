@@ -1,12 +1,11 @@
-# FleXray : premières vérifications
+# FleXray
 
-Sources : [fiche officielle du modèle](https://huggingface.co/VictorButoi/flexray) et [code officiel](https://github.com/VictorButoi/FleXray). Vérifications effectuées le 17 novembre 2026.
+[Code officiel](https://github.com/VictorButoi/FleXray) · [fiche du modèle](https://huggingface.co/VictorButoi/flexray) · [démonstration et manifeste](https://flexray.csail.mit.edu/demo/demo_manifest.json)
 
-- `members/flux0375` est le modèle principal préentraîné. Un export ONNX FP16 est annoncé dans `members/flux0375/onnx/` ; il est utilisé par la démonstration officielle dans le navigateur.
-- Le modèle prend une image en niveaux de gris, avec un canal d'entrée, et produit 61 canaux (60 structures et le fond) à une résolution de 256 × 256. Il produit des probabilités indépendantes pour chaque structure, et non des points de mesure.
-- Prétraitement documenté : passage en niveaux de gris, normalisation par les percentiles 0,5 et 99,5, ajout de bordures jusqu'à obtenir un carré, puis redimensionnement à 256 × 256. Les détails d'orientation et d'interpolation restent à vérifier dans l'implémentation officielle avant intégration.
-- Les sorties correspondent à l'ordre de `label_schema.json`. Le seuil de masque par défaut est 0,5. Les sorties doivent être remises dans le repère de l'image d'origine en annulant le redimensionnement et les bordures.
-- Les vertèbres C1 à C7, T1 à T12 et L1 à L5 possèdent des canaux individuels. Cela ne signifie pas que les plateaux vertébraux ou l'angle de Cobb sont fournis automatiquement.
-- Code FleXray : licence MIT. Poids publics : CC BY-NC 4.0, à usage non commercial, avec attribution.
+OrthoVision utilise le modèle préentraîné `flux0375` de Butoi et al., à la révision `b3d892015a51848f675739107f697c8e7ea709f4`. Le code officiel est sous licence MIT et les poids publics sous [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). Les poids ne sont pas redistribués dans ce dépôt.
 
-La démonstration officielle fonctionne dans un navigateur, mais nous n'avons pas encore testé l'export ONNX dans OrthoVision, les opérations WebGPU ou le repli WebAssembly. La taille du modèle, les droits d'hébergement, CORS et la qualité de la segmentation restent à vérifier avant une intégration. Aucun modèle n'est téléchargé dans cette version.
+Le navigateur charge l’export ONNX FP16 (opset 18, environ 203 Mo) à la demande, puis vérifie son SHA-256. L’inférence utilise ONNX Runtime Web, avec WebGPU en priorité et WebAssembly en repli. Aucune partie de la radiographie n’est envoyée à un serveur.
+
+Le prétraitement suit la [démo officielle](https://flexray.csail.mit.edu/demo/imaging.js) pour les images PNG et JPEG décodées par le navigateur : niveaux de gris, bordures noires centrales, filtre bilinéaire vers 256 × 256 puis normalisation par les percentiles 0,5 et 99,5. L’entrée `input` a la forme `[1,1,256,256]` et la sortie `probabilities` la forme `[1,61,256,256]`. Le seuil de 0,5 est appliqué par canal, dans l’ordre de `label_schema.json`, puis les bordures sont retirées pour afficher le masque sur l’image originale.
+
+OrthoVision exécute un seul passage, sans augmentation ni ensemble. FleXray produit des masques de structures, dont les vertèbres individuelles, sans fournir les points de mesure. Le placement des repères, la géométrie de Cobb, la comparaison et les exports sont propres à OrthoVision.

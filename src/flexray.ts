@@ -1,4 +1,6 @@
 import type { InferenceSession } from 'onnxruntime-web';
+import gpuWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url';
+import cpuWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url';
 import { sha256Hex } from './exam.ts';
 
 const size = 256;
@@ -10,6 +12,7 @@ const checksum = 'b8eb8851121cc694f9b529f2cd46f4f1bda29fcbb0eada7b1512af0d57462f
 
 type Runtime = typeof import('onnxruntime-web/webgpu');
 type Provider = 'webgpu' | 'wasm';
+const backendNames = { webgpu: 'WebGPU', wasm: 'WebAssembly' };
 interface Geometry { width: number; height: number; left: number; top: number; side: number }
 export interface Segmentation {
   geometry: Geometry;
@@ -18,10 +21,26 @@ export interface Segmentation {
   provider: Provider;
 }
 
-let runtime: Runtime;
 let cachedModel: Promise<{ bytes: Uint8Array; labels: string[] }> | undefined;
-let session: InferenceSession | undefined;
-let provider: Provider | undefined;
+let active: { provider: Provider; runtime: Runtime; session: InferenceSession } | undefined;
+
+async function startSession(provider: Provider, bytes: Uint8Array) {
+  const runtime = provider === 'webgpu'
+    ? await import('onnxruntime-web/webgpu')
+    : await import('onnxruntime-web/wasm');
+  runtime.env.wasm.numThreads = 1;
+  // Vite précompile les dépendances en développement. Le binaire WASM
+  // n'est alors plus à côté du module JS, donc on lui donne son URL servie.
+  const wasmUrl = provider === 'webgpu' ? gpuWasmUrl : cpuWasmUrl;
+  runtime.env.wasm.wasmPaths = { wasm: new URL(wasmUrl, window.location.href).href };
+  const session = await runtime.InferenceSession.create(bytes, { executionProviders: [provider] });
+  return { provider, runtime, session };
+}
+
+function errorDetail(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.replace(/https?:\/\/\S+/g, '[URL]').replace(/\s+/g, ' ').trim().slice(0, 300);
+}
 
 async function fetchModel(status: (message: string) => void) {
   const [response, schema] = await Promise.all([
@@ -130,34 +149,31 @@ function prepareImage(image: HTMLImageElement) {
 
 export async function segmentImage(image: HTMLImageElement, status: (message: string) => void): Promise<Segmentation> {
   status('Chargement de FleXray (environ 203 Mo au premier usage)…');
-  runtime ??= await import('onnxruntime-web/webgpu');
-  runtime.env.wasm.numThreads = 1;
   cachedModel ??= fetchModel(status).catch(error => { cachedModel = undefined; throw error; });
   const { bytes, labels } = await cachedModel;
   const { input, geometry } = prepareImage(image);
-  const tensor = new runtime.Tensor('float32', input, [1, 1, size, size]);
-  const providers: Provider[] = (navigator as Navigator & { gpu?: object }).gpu && provider !== 'wasm' ? ['webgpu', 'wasm'] : ['wasm'];
-  let lastError: unknown;
+  const providers: Provider[] = 'gpu' in navigator && active?.provider !== 'wasm' ? ['webgpu', 'wasm'] : ['wasm'];
+  const errors: string[] = [];
 
   for (const backend of providers) {
-    status(`Segmentation locale : ${backend === 'webgpu' ? 'WebGPU' : 'WebAssembly'}…`);
+    status(`Segmentation locale : ${backendNames[backend]}…`);
     await new Promise(resolve => setTimeout(resolve, 0));
     try {
-      session ??= await runtime.InferenceSession.create(bytes, { executionProviders: [backend] });
-      const result = await session.run({ input: tensor });
+      active ??= await startSession(backend, bytes);
+      const tensor = new active.runtime.Tensor('float32', input, [1, 1, size, size]);
+      const result = await active.session.run({ input: tensor });
       const output = result.probabilities;
       if (!output || output.dims.join(',') !== '1,61,256,256' || !(output.data instanceof Float32Array)) {
         throw new Error('Sortie du modèle inattendue.');
       }
-      provider = backend;
-      return { geometry, probabilities: output.data, labels, provider };
+      return { geometry, probabilities: output.data, labels, provider: backend };
     } catch (error) {
-      lastError = error;
-      await session?.release().catch(() => {});
-      session = undefined;
+      errors.push(`${backendNames[backend]} : ${errorDetail(error)}`);
+      await active?.session.release().catch(() => {});
+      active = undefined;
     }
   }
-  throw new Error('Ce navigateur n’a pas pu exécuter FleXray.', { cause: lastError });
+  throw new Error(`FleXray a échoué. ${errors.join(' · ')}`);
 }
 
 export function drawMask(segmentation: Segmentation, selected: number) {

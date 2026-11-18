@@ -15,17 +15,17 @@ npm ci
 npm run dev
 ```
 
-Ouvrir l’adresse affichée dans le terminal. L’accueil explique l’angle de Cobb à l’aide d’un schéma. Cliquer sur **Ouvrir l’outil**, puis sur **Ouvrir les exemples** pour voir deux radiographies JPEG de la même colonne avant et après intervention. Les images sont dans [public/examples](public/examples). Voir les [sources et droits de réutilisation](public/examples/sources.txt).
+Sur l’accueil, choisir **Ouvrir l’outil**, puis **Essayer la radio d’exemple**. La radiographie des deux jambes et ses six points pédagogiques sont disponibles localement. [Source de la radio](public/examples/sources.txt).
 
-## Utiliser la visionneuse
+## Mesurer les jambes
 
-- Ouvrir un PNG ou un JPEG, puis poser quatre points pour tracer deux plateaux vertébraux. Les points restent dans le repère de l’image et peuvent être déplacés après un zoom. Les traits sont orientés de gauche à droite pour calculer leur écart sans ramener les angles obtus sous 90°.
-- Exporter le PNG annoté ou les repères JSON. Pour rouvrir des repères, ouvrir d’abord le même fichier image, puis importer le JSON.
-- Ouvrir un deuxième examen pour comparer les angles et exporter un rapport via la boîte d’impression du navigateur. L’écart affiché est descriptif : projection, positionnement, cadrage et choix des vertèbres influencent les mesures.
-- **Proposer une mesure** estime deux vertèbres limites à partir des centres des masques FleXray, puis cherche les bords correspondants dans la radiographie. Les quatre points proposés restent modifiables. La suggestion peut échouer si la radio est recadrée, si des vertèbres manquent ou si les bords sont peu lisibles.
-- **Afficher les masques FleXray** permet de choisir une structure et de régler son opacité. Au premier usage de l’un des deux boutons, le navigateur charge environ 203 Mo de poids depuis Hugging Face.
+Utiliser une radio de face prise debout, avec les deux hanches, les genoux et les chevilles visibles sur un même cliché. Importer un PNG ou un JPEG. Identifier le côté du patient à partir du marqueur de la radio.
 
-Les exemples et les outils manuels ne nécessitent aucun accès à Hugging Face. L’IRM et le format DICOM ne sont pas pris en charge. FleXray a été entraîné pour des radiographies conventionnelles. Voir sa [fiche d’intégration](docs/flexray.md).
+Pour chaque jambe, placer le centre de la tête fémorale, du genou et de la cheville, en commençant par la gauche de l’image. L’outil mesure le changement de direction entre la cuisse et la jambe. Trois centres alignés donnent 0°. Le résultat indique si le genou est décalé vers l’intérieur ou vers l’extérieur. Le positionnement lors de la prise de vue et le choix des points influencent la mesure.
+
+**Proposer les six repères** télécharge FleXray (203 Mo au premier usage). OrthoVision estime les centres à partir des masques des fémurs et des tibias. Vérifier les points sur la radio et les déplacer au besoin. La précision de cette méthode sur une population de patients reste à évaluer. [Intégration de FleXray](docs/flexray.md).
+
+Les commandes permettent de comparer la même jambe entre deux examens, de rouvrir des repères JSON sur la même image, d’exporter un PNG annoté ou d’imprimer les résultats. L’exemple et la mesure manuelle fonctionnent indépendamment du téléchargement du modèle.
 
 ## Vérifier et héberger
 

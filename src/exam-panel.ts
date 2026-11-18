@@ -3,8 +3,8 @@
  * Ouvre la radio, relie les boutons à la visionneuse et affiche la mesure.
  */
 
-import { annotationData, download, imageHash, readAnnotation, type ExamImage, type MeasurementMethod } from './exam.ts';
-import { cobbAngle, formatAngle } from './measurements.ts';
+import { annotationData, download, imageHash, readAnnotation, type ExamImage, type Orientation, type MeasurementMethod } from './exam.ts';
+import { legAngle, describe } from './measurements.ts';
 import { annotatedPng, createViewer } from './viewer.ts';
 import type { Segmentation } from './flexray.ts';
 
@@ -22,6 +22,7 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
   const result = find<HTMLElement>('.result');
   const resultNote = find<HTMLElement>('.result-note');
   const details = find<HTMLDetailsElement>('.measurement-details');
+  const comparison = find<HTMLElement>('.side-comparison');
   const coordinates = find<HTMLElement>('.coordinates');
   const select = find<HTMLSelectElement>('.structures select');
   const opacity = find<HTMLInputElement>('.opacity input');
@@ -34,7 +35,17 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
   let mask: HTMLCanvasElement | null = null;
   let loadId = 0;
   let measurementMethod: MeasurementMethod = 'manual';
-  let proposedEdgeUncertain = false;
+  const orientation = find<HTMLSelectElement>('.orientation select');
+  const instruction = find<HTMLElement>('.instruction');
+  const joints = ['hanche', 'genou', 'cheville'];
+  orientation.onchange = updateResult;
+
+  // Nomme chaque jambe selon le marqueur de côté vérifié par l’utilisateur.
+  function sideNames() {
+    if (orientation.value === 'right-first') return ['Jambe droite', 'Jambe gauche'];
+    if (orientation.value === 'left-first') return ['Jambe gauche', 'Jambe droite'];
+    return ['À gauche de l’image', 'À droite de l’image'];
+  }
   let pointsRevision = 0;
   find('h2').textContent = title;
 
@@ -42,16 +53,25 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
   function updateResult() {
     const points = viewer.points;
     pointsRevision++;
-    if (!points.length && measurementMethod === 'assisted') {
-      measurementMethod = 'manual';
-      proposedEdgeUncertain = false;
-      aiStatus.textContent = '';
+    if (!points.length) measurementMethod = 'manual';
+    const sides = sideNames();
+    const angles = [legAngle(points, 0), legAngle(points, 1)];
+    result.textContent = sides.map((name, i) => name + ' · ' + describe(angles[i])).join('\n');
+    const [first, second] = angles;
+    comparison.hidden = first === null || second === null;
+    if (first !== null && second !== null) {
+      const gap = Math.abs(first) - Math.abs(second);
+      if (Math.abs(gap) < 0.05) comparison.textContent = 'Les deux genoux présentent le même écart à l’axe droit.';
+      else comparison.textContent = sides[gap > 0 ? 0 : 1] + ' · le genou s’écarte davantage de l’axe hanche–cheville.';
     }
-    const angle = cobbAngle(points);
-    const value = angle === null ? (points.length === 4 ? 'repères confondus' : '—') : formatAngle(angle);
-    result.textContent = `Angle de Cobb ${measurementMethod === 'assisted' ? 'assisté' : 'manuel'} : ${value}`;
-    resultNote.hidden = angle === null || !proposedEdgeUncertain;
-    resultNote.textContent = resultNote.hidden ? '' : 'Mesure à vérifier : un bord n’a pas été repéré avec assez de certitude.';
+    instruction.textContent = points.length < 6
+      ? sides[Math.floor(points.length / 3)] + ' — place le centre de l’articulation (' + joints[points.length % 3] + ').'
+      : 'Fais glisser un point pour ajuster la mesure.';
+    resultNote.hidden = !points.length;
+    const invalid = angles.some((value, i) => points.length >= (i + 1) * 3 && value === null);
+    resultNote.textContent = invalid ? 'Vérifie l’ordre des repères de haut en bas : hanche, genou, cheville.'
+      : measurementMethod === 'assisted' ? 'Repères estimés par FleXray, à vérifier sur la radio.'
+      : measurementMethod === 'example' ? 'Repères pédagogiques placés à la main.' : 'Mesure manuelle.';
     details.hidden = !points.length;
     if (!points.length) details.open = false;
     coordinates.textContent = points.length
@@ -74,6 +94,7 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
       image = next;
       examImage = { name, width: next.naturalWidth, height: next.naturalHeight, sha256 };
       segmentation = undefined;
+      orientation.value = 'unknown';
       mask = null;
       find<HTMLElement>('.structures').hidden = true;
       find<HTMLElement>('.opacity').hidden = true;
@@ -83,7 +104,7 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
       viewer.setImage(url, examImage);
       viewer.setPan(false);
       pan.setAttribute('aria-pressed', 'false');
-      for (const selector of ['.view-controls', '.instruction', '.exports', '.ai']) {
+      for (const selector of ['.view-controls', '.instruction', '.exports', '.ai', '.orientation']) {
         find<HTMLElement>(selector).hidden = false;
       }
       if (previous) URL.revokeObjectURL(previous.src);
@@ -127,10 +148,10 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
     const target = examImage;
     if (!file || !target) return;
     try {
-      const { points, method } = readAnnotation(await file.text(), target);
+      const { points, method, orientation: savedSide } = readAnnotation(await file.text(), target);
       if (examImage !== target) return;
       measurementMethod = method;
-      proposedEdgeUncertain = false;
+      orientation.value = savedSide;
       viewer.setPoints(points);
       status.textContent = 'Repères importés.';
     } catch (error) {
@@ -140,7 +161,7 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
   // Télécharge les points et la mesure au format JSON.
   find<HTMLButtonElement>('.json').onclick = () => {
     if (!examImage) return;
-    const data = JSON.stringify(annotationData(examImage, viewer.points, measurementMethod), null, 2);
+    const data = JSON.stringify(annotationData(examImage, viewer.points, measurementMethod, orientation.value as Orientation), null, 2);
     download(new Blob([data], { type: 'application/json' }), `orthovision-${title.at(-1)}.json`);
   };
   // Télécharge la radio avec les traits et le masque visible au format PNG.
@@ -208,13 +229,11 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
     }
   }
 
-  // Prépare la liste des structures et affiche les masques des vertèbres.
+  // Prépare la liste des structures et affiche les masques des jambes.
   segment.onclick = () => withPrediction(async (prediction, target) => {
-    select.replaceChildren(new Option('Masquer', ''), new Option('Toutes les vertèbres', '-1'));
+    select.replaceChildren(new Option('Masquer', ''), new Option('Fémurs et tibias', '-1'));
     prediction.labels.forEach((label, index) => {
-      if (!index) return;
-      const name = label.startsWith('vertebra_') ? `Vertèbre ${label.slice(9).toUpperCase()}` : label.replaceAll('_', ' ');
-      select.add(new Option(name, String(index)));
+      if (label === 'femurs' || label === 'tibiae') select.add(new Option(label === 'femurs' ? 'Fémurs' : 'Tibias', String(index)));
     });
     select.value = '-1';
     find<HTMLElement>('.structures').hidden = false;
@@ -223,28 +242,27 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
     if (image === target) aiStatus.textContent = `Masques FleXray (${prediction.provider}).`;
   });
 
-  // Propose quatre points à partir des masques et des bords visibles sur la radio.
+  // Propose trois points pour chaque jambe à partir des masques.
   suggest.onclick = () => {
     const revision = pointsRevision;
     const id = loadId;
     return withPrediction(async (prediction, target) => {
-      const { suggestCobb } = await import('./cobb-suggestion.ts');
+      const { suggestLegs } = await import('./leg-suggestion.ts');
       if (image !== target || loadId !== id) return;
       // Garde les repères si l’utilisateur les a modifiés pendant le calcul.
       if (pointsRevision !== revision) {
         aiStatus.textContent = 'Tes modifications ont été conservées. Relance la proposition si tu veux les remplacer.';
         return;
       }
-      const proposal = suggestCobb(prediction, target);
+      const proposal = suggestLegs(prediction, target.naturalWidth, target.naturalHeight);
       if (!proposal) {
-        aiStatus.textContent = 'Les deux bords n’ont pas pu être repérés. Tu peux placer les points à la main.';
+        aiStatus.textContent = 'Les deux jambes entières n’ont pas pu être repérées. Tu peux placer les points à la main.';
         return;
       }
       measurementMethod = 'assisted';
-      proposedEdgeUncertain = proposal.checkEdges;
-      viewer.setPoints(proposal.points);
+      viewer.setPoints(proposal);
       status.textContent = '';
-      aiStatus.textContent = `Paire proposée : ${proposal.upper}–${proposal.lower}.`;
+      aiStatus.textContent = '';
     });
   };
 
@@ -254,14 +272,24 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
     // Indique si la radio est chargée pour les commandes de comparaison et d’impression.
     get hasImage() { return Boolean(image); },
     // Donne l’angle actuel à la page de comparaison.
-    get angle() { return cobbAngle(viewer.points); },
+    get patientAngles() {
+      if (orientation.value === 'unknown') return null;
+      const angles = [legAngle(viewer.points, 0), legAngle(viewer.points, 1)];
+      return orientation.value === 'right-first' ? angles : angles.reverse();
+    },
     // Ouvre une des radios fournies avec l’application.
-    async openExample(filename: string, name: string) {
+    async openExample() {
       const id = ++loadId;
       try {
-        const response = await fetch(`${import.meta.env.BASE_URL}examples/${filename}`);
+        const response = await fetch(`${import.meta.env.BASE_URL}examples/legs.jpg`);
         if (!response.ok) throw new Error();
-        await open(await response.blob(), name, id);
+        await open(await response.blob(), 'Radio d’exemple', id);
+        if (id !== loadId) return;
+        // Le marqueur R apparaît à gauche de cette radio.
+        orientation.value = 'right-first';
+        measurementMethod = 'example';
+        viewer.setPoints([{ x: 82, y: 102 }, { x: 88, y: 399 }, { x: 32, y: 635 },
+          { x: 248, y: 100 }, { x: 229, y: 394 }, { x: 278, y: 633 }]);
       } catch {
         if (id === loadId) status.textContent = 'Impossible de charger la radiographie d’exemple.';
       }

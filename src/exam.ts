@@ -3,7 +3,7 @@
  * Prépare les exports et vérifie que les repères importés vont sur la bonne radio.
  */
 
-import { cobbAngle, type Point } from './measurements.ts';
+import { legAngle, type Point } from './measurements.ts';
 
 export interface ExamImage {
   name: string;
@@ -12,41 +12,45 @@ export interface ExamImage {
   sha256: string;
 }
 
-export type MeasurementMethod = 'manual' | 'assisted';
+export type MeasurementMethod = 'manual' | 'assisted' | 'example';
+export type Orientation = 'unknown' | 'right-first' | 'left-first';
 
 // Regroupe les points et la mesure pour préparer un fichier JSON.
-export function annotationData(image: ExamImage, points: readonly Point[], method: MeasurementMethod = 'manual') {
+export function annotationData(image: ExamImage, points: readonly Point[], method: MeasurementMethod = 'manual', orientation: Orientation = 'unknown') {
   return {
-    version: 1,
+    version: 2,
     image,
+    orientation,
     points,
     measurement: {
-      type: 'cobb',
+      type: 'bilateral-leg-alignment',
       method,
-      algorithm: 'left-to-right-angle-v2',
+      algorithm: 'neutral-zero-inward-positive',
       unit: 'degree',
-      value: cobbAngle(points),
+      imageLeft: legAngle(points, 0),
+      imageRight: legAngle(points, 1),
     },
   };
 }
 
 // Lit les repères et vérifie qu’ils appartiennent à la radio ouverte.
-export function readAnnotation(text: string, image: ExamImage): { points: Point[]; method: MeasurementMethod } {
+export function readAnnotation(text: string, image: ExamImage): { points: Point[]; method: MeasurementMethod; orientation: Orientation } {
   const data = JSON.parse(text);
-  if (data?.version !== 1 || data.measurement?.type !== 'cobb' || !Array.isArray(data.points)) {
+  if (data?.version !== 2 || data.measurement?.type !== 'bilateral-leg-alignment' || !Array.isArray(data.points)) {
     throw new Error('Format de repères non reconnu.');
   }
   if (data.image?.sha256 !== image.sha256 || data.image.width !== image.width || data.image.height !== image.height) {
     throw new Error('Ces repères correspondent à une autre image.');
   }
-  if (data.points.length > 4 || data.points.some((point: Point) =>
+  if (data.points.length > 6 || data.points.some((point: Point) =>
     !point || !Number.isFinite(point.x) || !Number.isFinite(point.y) ||
     point.x < 0 || point.x > image.width || point.y < 0 || point.y > image.height)) {
     throw new Error('Les coordonnées des repères sont invalides.');
   }
   return {
     points: data.points.map(({ x, y }: Point) => ({ x, y })),
-    method: data.measurement.method === 'assisted' ? 'assisted' : 'manual',
+    method: ['assisted', 'example'].includes(data.measurement.method) ? data.measurement.method : 'manual',
+    orientation: ['right-first', 'left-first'].includes(data.orientation) ? data.orientation : 'unknown',
   };
 }
 

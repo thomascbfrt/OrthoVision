@@ -5,7 +5,6 @@
 
 import './style.css';
 import { setupExam } from './exam-panel.ts';
-import { formatAngle } from './measurements.ts';
 
 const home = document.querySelector<HTMLElement>('#accueil')!;
 const tool = document.querySelector<HTMLElement>('#outil')!;
@@ -44,17 +43,21 @@ function updateComparison() {
   const bVisible = !second.element.hidden;
   comparison.hidden = !bVisible;
   report.disabled = !first.hasImage && (!bVisible || !second.hasImage);
-  if (first.angle === null || second.angle === null) {
-    difference.textContent = 'Mesurez un angle sur chaque examen pour afficher l’écart.';
+  const a = first.patientAngles;
+  const b = second.patientAngles;
+  if (!a || !b) {
+    difference.textContent = 'Identifie le côté du patient sur chaque radio pour comparer les mêmes jambes.';
     return;
   }
-  const gap = second.angle - first.angle;
-  const displayGap = formatAngle(Math.abs(gap));
-  if (displayGap === formatAngle(0)) {
-    difference.textContent = 'Les deux angles mesurés sont identiques à la précision affichée.';
-    return;
-  }
-  difference.textContent = `L’angle mesuré sur la radio B est ${gap > 0 ? 'supérieur' : 'inférieur'} de ${displayGap} à celui de la radio A.`;
+  difference.textContent = ['Droite', 'Gauche'].map((side, i) => {
+    const before = a[i];
+    const after = b[i];
+    if (before === null || after === null) return side + ' · mesure à compléter';
+    const delta = after - before;
+    if (Math.abs(delta) < 0.05) return side + ' · même angle à 0,1° près';
+    return side + ' · de A à B, ' + Math.abs(delta).toFixed(1).replace('.', ',') + '° vers ' + (delta > 0 ? 'l’intérieur' : 'l’extérieur');
+  }).join(' / ');
+
 }
 
 // Affiche ou masque le deuxième examen.
@@ -65,14 +68,8 @@ function showCompare(show: boolean) {
 }
 
 compare.onclick = () => showCompare(second.element.hidden);
-// Ouvre les deux radiographies fournies en exemple.
-document.querySelector<HTMLButtonElement>('#demo')!.onclick = async () => {
-  showCompare(true);
-  await Promise.all([
-    first.openExample('spine-before.jpg', 'Radiographie avant intervention'),
-    second.openExample('spine-after.jpg', 'Radiographie après intervention'),
-  ]);
-};
+// Ouvre la radio locale avec ses six repères pédagogiques.
+document.querySelector<HTMLButtonElement>('#demo')!.onclick = () => first.openExample();
 
 // Rétablit la vue complète des radios avant de lancer l’impression.
 report.onclick = () => {

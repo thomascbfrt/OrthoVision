@@ -51,9 +51,16 @@ export function suggestLegs(prediction: Segmentation, width: number, height: num
   const shins = pairedBones(prediction, 'tibiae', size).map(b => ({ top: end(b, 0.025), ankle: end(b, 0.97) }))
     .sort((a, b) => a.ankle.x - b.ankle.x);
   if (thighs.length !== 2 || shins.length !== 2) return null;
+  // Le haut du pied aide à retrouver la cheville quand le masque du tibia finit trop tôt.
+  const feet = pairedBones(prediction, 'tarsals', size).map(b => end(b, 0.06)).sort((a, b) => a.x - b.x);
   const points: Point[] = [];
   for (const [i, { hip, bottom }] of thighs.entries()) {
-    const { top, ankle } = shins[i];
+    const { top } = shins[i];
+    let ankle = shins[i].ankle;
+    const foot = feet[i];
+    if (feet.length === 2 && foot.y > ankle.y && Math.hypot(foot.x - ankle.x, foot.y - ankle.y) < (ankle.y - top.y) * 0.4) {
+      ankle = foot;
+    }
     const thighLength = bottom.y - hip.y;
     const shinLength = ankle.y - top.y;
     if (Math.min(thighLength, shinLength) < size * 0.14 ||

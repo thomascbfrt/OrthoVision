@@ -1,33 +1,22 @@
 /*
- * Calcul de l’angle de Cobb.
- * Les calculs utilisent les coordonnées des repères, indépendamment du zoom.
+ * Mesure de l’alignement des deux jambes sur une radio de face.
+ * Chaque groupe de trois points va de la hanche à la cheville.
  */
+export interface Point { x: number; y: number }
 
-export interface Point {
-  x: number;
-  y: number;
+// Renvoie l’écart à l’axe droit. Un angle positif indique un genou vers l’intérieur.
+export function legAngle(points: readonly Point[], side: number): number | null {
+  const [hip, knee, ankle] = points.slice(side * 3, side * 3 + 3);
+  if (!ankle || hip.y >= knee.y || knee.y >= ankle.y) return null;
+  const thigh = Math.atan2(knee.x - hip.x, knee.y - hip.y);
+  const shin = Math.atan2(ankle.x - knee.x, ankle.y - knee.y);
+  return (thigh - shin) * (side === 0 ? 1 : -1) * 180 / Math.PI;
 }
 
-// Calcule l’écart en degrés entre les deux traits formés par les quatre points.
-export function cobbAngle(points: readonly Point[]): number | null {
-  if (points.length !== 4) return null;
-
-  const [a, b, c, d] = points;
-  // Oriente toujours le trait dans le même sens, même si les points ont été posés à l’envers.
-  function orientation(from: Point, to: Point) {
-    const x = to.x - from.x;
-    const y = to.y - from.y;
-    if (!x && !y) return null;
-    const sign = x < 0 || (x === 0 && y < 0) ? -1 : 1;
-    return Math.atan2(y * sign, x * sign);
-  }
-  const upper = orientation(a, b);
-  const lower = orientation(c, d);
-  if (upper === null || lower === null) return null;
-  return Math.abs(lower - upper) * 180 / Math.PI;
-}
-
-// Affiche un angle avec une décimale et une virgule.
-export function formatAngle(angle: number): string {
-  return `${angle.toFixed(1).replace('.', ',')}°`;
+// Affiche l’amplitude et le sens de la déviation à un dixième de degré.
+export function describe(angle: number | null) {
+  if (angle === null) return '—';
+  const value = Math.abs(angle).toFixed(1).replace('.', ',');
+  if (value === '0,0') return '0,0° (aligné)';
+  return value + (angle > 0 ? '° vers l’intérieur (X)' : '° vers l’extérieur (O)');
 }

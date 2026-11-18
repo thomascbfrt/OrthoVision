@@ -1,11 +1,6 @@
-Images de démonstration OrthoVision
+Radiographie pédagogique des deux jambes (legs.jpg)
 
-spine-before.jpg — Wiki pre-op.jpg, Silverjonny (Wikimedia Commons), domaine public.
-https://commons.wikimedia.org/wiki/File:Wiki_pre-op.jpg
-
-spine-after.jpg — Wiki post-op.jpg, Silverjonny (Wikimedia Commons), domaine public.
-https://commons.wikimedia.org/wiki/File:Wiki_post-op.jpg
-
-Les métadonnées EXIF ont été retirées. Les images sont fournies en JPEG.
-Deux projections du même cas, à des moments différents. Leur orientation et
-leur cadrage peuvent différer. Images fournies pour essayer les outils.
+MPS Morquio kl.jpeg — Kinderradiologie Olgahospital Klinikum Stuttgart
+https://commons.wikimedia.org/wiki/File:MPS_Morquio_kl.jpeg
+CC BY-SA 4.0 — https://creativecommons.org/licenses/by-sa/4.0/
+Image originale, renommée. Les repères superposés par OrthoVision sont des estimations pédagogiques.

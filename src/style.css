@@ -10,7 +10,7 @@ button, input, select { font: inherit; }
 /* Limite la largeur du texte et adapte le schéma à l’écran. */
 .home { max-width: 38rem; margin: 2rem auto; }
 .home figure { margin: 1rem 0; }
-.home img { display: block; width: 100%; height: auto; border-radius: .5rem; }
+.home img { display: block; width: auto; max-width: 100%; height: min(36vh, 20rem); border-radius: .5rem; }
 .home figcaption { margin-top: .4rem; }
 .open-tool { display: inline-block; padding: .6rem 1rem; border: 1px solid currentColor; border-radius: .4rem; font-weight: 600; }
 /* Range les commandes et place les examens côte à côte si l’écran le permet. */
@@ -23,7 +23,7 @@ button, input, select { font: inherit; }
 .viewer[data-pan] { cursor: grab; }
 .viewer circle { cursor: move; }
 .view-controls, .ai { margin-top: .6rem; }
-.result { font-size: 1.2rem; font-weight: 600; margin-bottom: .25rem; }
+.result { white-space: pre-line; font-size: 1.2rem; font-weight: 600; margin-bottom: .25rem; }
 .result-note { margin: 0 0 .5rem; }
 .measurement-details { margin-bottom: .75rem; }
 .status, .ai-status { overflow-wrap: anywhere; }

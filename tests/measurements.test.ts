@@ -1,44 +1,31 @@
 /*
- * Tests du calcul de l’angle et des fichiers de repères.
- * Vérifie des cas simples, un angle obtus et la réouverture des exports.
+ * Vérifie le sens des angles pour deux jambes en miroir.
+ * Les repères exportés gardent leur ordre, leur côté et leur image.
  */
-
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cobbAngle } from '../src/measurements.ts';
+import { legAngle } from '../src/measurements.ts';
 import { annotationData, readAnnotation } from '../src/exam.ts';
 
-const a = { x: 0, y: 0 };
-const b = { x: 20, y: 0 };
-const c = { x: 3, y: 4 };
-const d = { x: 3 + Math.sqrt(3), y: 5 };
+const points = [{ x: 10, y: 0 }, { x: 20, y: 10 }, { x: 20, y: 20 },
+  { x: 60, y: 0 }, { x: 50, y: 10 }, { x: 50, y: 20 }];
 
-test('Cobb : parallèles, 30°, 90° et ordre inversé', () => {
-  assert.equal(cobbAngle([a, b, c, { x: 8, y: 4 }]), 0);
-  assert.ok(Math.abs(cobbAngle([a, b, c, d])! - 30) < 1e-10);
-  assert.ok(Math.abs(cobbAngle([b, a, d, c])! - 30) < 1e-10);
-  assert.equal(cobbAngle([a, b, c, { x: 3, y: 9 }]), 90);
+test('Deux genoux en X donnent le même angle positif', () => {
+  assert.equal(legAngle(points, 0), 45);
+  assert.equal(legAngle(points, 1), 45);
 });
 
-test('Cobb : repères incomplets ou confondus', () => {
-  assert.equal(cobbAngle([a, b, c]), null);
-  assert.equal(cobbAngle([a, a, c, d]), null);
+test('Un genou en O donne un angle négatif et une jambe droite donne zéro', () => {
+  assert.equal(legAngle([{ x: 30, y: 0 }, ...points.slice(1)], 0), -45);
+  assert.equal(legAngle([{ x: 20, y: 0 }, ...points.slice(1)], 0), 0);
+  assert.equal(legAngle(points.slice(0, 5), 1), null);
+  assert.equal(legAngle([points[1], points[1], points[2]], 0), null);
 });
 
-test('Cobb : 110° est conservé même si les points sont placés de droite à gauche', () => {
-  const slope = Math.tan(55 * Math.PI / 180);
-  const first = [{ x: 0, y: 4 }, { x: 1, y: 4 - slope }];
-  const second = [{ x: 1, y: 8 + slope }, { x: 0, y: 8 }];
-  assert.ok(Math.abs(cobbAngle([...first, ...second])! - 110) < 1e-10);
-});
-
-test('Les repères conservent leurs coordonnées et sont liés aux octets de l’image', () => {
-  const image = { name: 'radio.jpg', width: 200, height: 300, sha256: 'sample' };
-  const points = [a, b, c, d];
-  const data = annotationData(image, points, 'assisted');
-  assert.deepEqual(readAnnotation(JSON.stringify(data), image), { points, method: 'assisted' });
-  const legacy = { ...data, measurement: { ...data.measurement, method: 'manual', algorithm: 'acute-line-angle-v1' } };
-  assert.deepEqual(readAnnotation(JSON.stringify(legacy), image), { points, method: 'manual' });
+test('Les six points et le côté sont liés à la radio et au type de mesure', () => {
+  const image = { name: 'radio.jpg', width: 80, height: 30, sha256: 'sample' };
+  const data = annotationData(image, points, 'assisted', 'right-first');
+  assert.deepEqual(readAnnotation(JSON.stringify(data), image), { points, method: 'assisted', orientation: 'right-first' });
   assert.throws(() => readAnnotation(JSON.stringify(data), { ...image, sha256: 'other' }), /autre image/);
-  assert.throws(() => readAnnotation(JSON.stringify({ ...data, points: [{ x: -1, y: 0 }] }), image), /invalides/);
+  assert.throws(() => readAnnotation(JSON.stringify({ ...data, version: 1 }), image), /non reconnu/);
 });

@@ -41,13 +41,13 @@ export function createViewer(svg: SVGSVGElement, onChange: () => void) {
     applyView();
   }
 
-  // Redessine les points et relie chaque paire pour former un trait.
+  // Redessine les points et relie la hanche, le genou et la cheville de chaque jambe.
   function draw() {
     marks.replaceChildren();
     for (let index = 0; index < points.length; index++) {
       const point = points[index];
-      const color = colors[Math.floor(index / 2)];
-      if (index % 2 === 1) {
+      const color = colors[Math.floor(index / 3)];
+      if (index % 3 !== 0) {
         const start = points[index - 1];
         const line = document.createElementNS(svgNamespace, 'line');
         line.setAttribute('x1', String(start.x));
@@ -93,7 +93,7 @@ export function createViewer(svg: SVGSVGElement, onChange: () => void) {
     if (pan) drag = { id: event.pointerId, index: -1, start: point };
     else if (target.dataset.index !== undefined) {
       drag = { id: event.pointerId, index: Number(target.dataset.index), start: point };
-    } else if (points.length < 4 && point.x >= 0 && point.x <= width && point.y >= 0 && point.y <= height) {
+    } else if (points.length < 6 && point.x >= 0 && point.x <= width && point.y >= 0 && point.y <= height) {
       setPoints([...points, { x: point.x, y: point.y }]);
     }
     if (drag) svg.setPointerCapture(event.pointerId);
@@ -174,21 +174,17 @@ export function annotatedPng(image: HTMLImageElement, points: readonly Point[], 
   }
   const radius = Math.max(canvas.width, canvas.height) / 105;
   ctx.lineWidth = Math.max(2, radius / 2);
-  for (let index = 0; index < points.length; index += 2) {
-    const [a, b] = points.slice(index, index + 2);
-    ctx.strokeStyle = colors[index / 2];
-    ctx.fillStyle = ctx.strokeStyle;
-    if (b) {
+  for (const [index, point] of points.entries()) {
+    ctx.fillStyle = ctx.strokeStyle = colors[Math.floor(index / 3)];
+    if (index % 3 !== 0) {
       ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
+      ctx.moveTo(points[index - 1].x, points[index - 1].y);
+      ctx.lineTo(point.x, point.y);
       ctx.stroke();
     }
-    for (const point of [a, b].filter(Boolean)) {
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
-      ctx.fill();
-    }
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
+    ctx.fill();
   }
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Export PNG impossible.')), 'image/png');

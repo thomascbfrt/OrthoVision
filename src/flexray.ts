@@ -194,7 +194,7 @@ export function drawMask(segmentation: Segmentation, selected: number) {
   const ctx = canvas.getContext('2d')!;
   const image = ctx.createImageData(size, size);
   const channels = selected === -1
-    ? labels.map((label, index) => label.startsWith('vertebra_') ? index : -1).filter(index => index !== -1)
+    ? labels.map((label, index) => ['femurs', 'tibiae'].includes(label) ? index : -1).filter(index => index !== -1)
     : [selected];
   for (let i = 0; i < pixels; i++) {
     if (!channels.some(channel => probabilities[channel * pixels + i] >= 0.5)) continue;

@@ -10,20 +10,16 @@
   <title>OrthoVision</title>
 </head>
 <body>
-  <!-- Présente la mesure de Cobb avant d’ouvrir l’outil. -->
+  <!-- Explique l’alignement des jambes avant d’ouvrir l’outil. -->
   <main id="accueil" class="home" tabindex="-1">
     <h1>OrthoVision</h1>
-    <p>Mesurer la courbure d’une colonne sur une radiographie avec l’angle de Cobb.</p>
-
-    <h2>Que signifie un angle de 42° ?</h2>
+    <h2>Comparer l’alignement des jambes</h2>
+    <p>Sur une radio de face prise debout, regarde où se trouve chaque genou entre la hanche et la cheville. Un genou décalé vers l’intérieur donne une forme en X, vers l’extérieur une forme en O.</p>
     <figure>
-      <img src="%BASE_URL%cobb-angle.png" alt="Deux traits suivent les bords des vertèbres aux extrémités d’une courbe. Leur prolongement forme un angle de 42 degrés." width="808" height="374">
-      <figcaption>La courbure est marquée. Si la personne grandit encore, cette mesure aide le médecin à surveiller si elle s’accentue.</figcaption>
+      <img src="%BASE_URL%examples/legs.jpg" alt="Radio de face des deux jambes, des hanches aux chevilles." width="325" height="712">
+      <figcaption>Dans cet exemple, les genoux se rapprochent du milieu du corps. Ouvre la radio pour voir les repères et comparer les deux côtés.</figcaption>
     </figure>
-    <p>OrthoVision calcule l’angle entre ces deux bords. Tu peux placer les quatre points à la main ou demander à l’outil de te les proposer, puis les corriger sur la radio.</p>
-
     <p><a class="open-tool" href="#outil">Ouvrir l’outil</a></p>
-    <p>Pour essayer sans importer de radio, clique ensuite sur « Ouvrir les exemples ».</p>
     <small>Prototype pédagogique, hors usage clinique.</small>
   </main>
 
@@ -32,9 +28,9 @@
     <header>
       <nav aria-label="Navigation"><a class="back-home" href="#accueil">Retour à l’accueil</a></nav>
       <h1>Visionneuse OrthoVision</h1>
-      <p>Visualiser et annoter des radiographies. Prototype pédagogique, hors usage clinique.</p>
+      <p>Mesurer l’alignement hanche–genou–cheville. Prototype pédagogique, hors usage clinique.</p>
       <div class="controls">
-        <button id="demo">Ouvrir les exemples</button>
+        <button id="demo">Essayer la radio d’exemple</button>
         <button id="compare" aria-pressed="false">Comparer deux examens</button>
         <button id="report" disabled>Imprimer / Enregistrer en PDF</button>
       </div>
@@ -59,7 +55,7 @@
       <p class="image-info">Aucune image ouverte</p>
       <!-- FleXray propose les points ou affiche les zones reconnues. -->
       <div class="controls ai" hidden>
-        <button class="suggest">Proposer une mesure</button>
+        <button class="suggest">Proposer les six repères</button>
         <button class="segment">Afficher les masques FleXray</button>
         <small>Premier chargement : 203 Mo · usage non commercial.</small>
         <label class="structures" hidden>Structure <select></select></label>
@@ -81,8 +77,12 @@
         <button class="undo">Retirer le dernier point</button>
         <button class="clear">Effacer les repères</button>
       </div>
-      <p class="instruction" hidden>Angle de Cobb manuel : placez deux points sur le plateau supérieur de la vertèbre limite haute, puis deux sur le plateau inférieur de la vertèbre limite basse. Faites glisser un point pour le corriger.</p>
-      <p class="result" aria-live="polite">Angle de Cobb : —</p>
+      <p class="instruction" hidden></p>
+      <label class="orientation" hidden>Sur le bord gauche de l’image se trouve
+        <select><option value="unknown">Côté du patient à vérifier</option><option value="right-first">La jambe droite du patient</option><option value="left-first">La jambe gauche du patient</option></select>
+      </label>
+      <p class="result" aria-live="polite">Écart à l’axe droit —</p>
+      <p class="side-comparison" hidden></p>
       <p class="result-note" role="status" hidden></p>
       <!-- Les coordonnées restent accessibles à la demande. -->
       <details class="measurement-details" hidden>

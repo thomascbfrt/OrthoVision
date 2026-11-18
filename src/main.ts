@@ -2,6 +2,20 @@ import './style.css';
 import { setupExam } from './exam-panel.ts';
 import { formatAngle } from './measurements.ts';
 
+const home = document.querySelector<HTMLElement>('#accueil')!;
+const tool = document.querySelector<HTMLElement>('#outil')!;
+
+function showPage(focus: boolean) {
+  const openTool = window.location.hash === '#outil';
+  home.hidden = openTool;
+  tool.hidden = !openTool;
+  document.title = openTool ? 'Visionneuse OrthoVision' : 'OrthoVision';
+  if (focus) (openTool ? tool : home).focus();
+}
+
+showPage(false);
+window.addEventListener('hashchange', () => showPage(true));
+
 const exams = document.querySelector<HTMLElement>('#exams')!;
 const template = document.querySelector<HTMLTemplateElement>('#exam-template')!;
 const compare = document.querySelector<HTMLButtonElement>('#compare')!;

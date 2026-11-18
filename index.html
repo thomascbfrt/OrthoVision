@@ -6,22 +6,42 @@
   <title>OrthoVision</title>
 </head>
 <body>
-  <header>
+  <main id="accueil" class="home" tabindex="-1">
     <h1>OrthoVision</h1>
-    <p>Visualiser et annoter des radiographies. Prototype pédagogique, hors usage clinique.</p>
-    <div class="controls">
-      <button id="demo">Ouvrir les exemples</button>
-      <button id="compare" aria-pressed="false">Comparer deux examens</button>
-      <button id="report" disabled>Imprimer / Enregistrer en PDF</button>
-    </div>
-  </header>
+    <p>Mesurer la courbure d’une colonne sur une radiographie avec l’angle de Cobb.</p>
 
-  <main id="exams"></main>
-  <section id="comparison" hidden>
-    <h2>Comparaison</h2>
-    <p id="difference"></p>
-    <p>La projection, le cadrage, le positionnement et les vertèbres choisies peuvent modifier la mesure. Un écart entre les deux angles ne suffit pas à conclure à une évolution.</p>
-  </section>
+    <h2>Que mesurent les deux traits ?</h2>
+    <figure>
+      <img src="%BASE_URL%cobb-angle.png" alt="Deux traits suivent les bords des vertèbres aux extrémités d’une courbe. Leur prolongement forme un angle de 42 degrés." width="808" height="374">
+      <figcaption>Sur ce schéma, les deux traits forment un angle de 42°.</figcaption>
+    </figure>
+    <p>Tu places deux points sur le bord supérieur de la vertèbre du haut, puis deux sur le bord inférieur de celle du bas. OrthoVision trace les lignes et calcule l’angle entre elles.</p>
+
+    <p><a class="open-tool" href="#outil">Ouvrir l’outil</a></p>
+    <p>Pour essayer sans importer de radio, clique ensuite sur « Ouvrir les exemples ».</p>
+    <small>Prototype pédagogique, hors usage clinique.</small>
+  </main>
+
+  <main id="outil" tabindex="-1" hidden>
+    <header>
+      <nav aria-label="Navigation"><a class="back-home" href="#accueil">Retour à l’accueil</a></nav>
+      <h1>Visionneuse OrthoVision</h1>
+      <p>Visualiser et annoter des radiographies. Prototype pédagogique, hors usage clinique.</p>
+      <div class="controls">
+        <button id="demo">Ouvrir les exemples</button>
+        <button id="compare" aria-pressed="false">Comparer deux examens</button>
+        <button id="report" disabled>Imprimer / Enregistrer en PDF</button>
+      </div>
+    </header>
+
+    <div id="exams"></div>
+    <section id="comparison" hidden>
+      <h2>Comparaison</h2>
+      <p id="difference"></p>
+      <p>La projection, le cadrage, le positionnement et les vertèbres choisies peuvent modifier la mesure. Un écart entre les deux angles ne suffit pas à conclure à une évolution.</p>
+    </section>
+    <footer><a href="%BASE_URL%examples/sources.txt">Sources des radiographies</a></footer>
+  </main>
 
   <template id="exam-template">
     <section class="exam">
@@ -61,7 +81,6 @@
       <p class="status" role="status"></p>
     </section>
   </template>
-  <footer><a href="%BASE_URL%examples/sources.txt">Sources des radiographies</a></footer>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

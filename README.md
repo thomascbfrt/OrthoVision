@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Ouvrir l’adresse affichée dans le terminal. Pour un premier essai, cliquer sur **Ouvrir les exemples**. Deux radiographies JPEG de la même colonne avant et après intervention sont conservées dans [public/examples](public/examples) et servies avec l’application. Voir les [sources et droits de réutilisation](public/examples/sources.txt).
+Ouvrir l’adresse affichée dans le terminal. L’accueil explique l’angle de Cobb à l’aide d’un schéma. Cliquer sur **Ouvrir l’outil**, puis sur **Ouvrir les exemples** pour voir deux radiographies JPEG de la même colonne avant et après intervention. Les images sont dans [public/examples](public/examples). Voir les [sources et droits de réutilisation](public/examples/sources.txt).
 
 ## Utiliser la visionneuse
 

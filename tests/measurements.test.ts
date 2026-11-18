@@ -1,3 +1,8 @@
+/*
+ * Tests du calcul de l’angle et des fichiers de repères.
+ * Vérifie des cas simples, un angle obtus et la réouverture des exports.
+ */
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cobbAngle } from '../src/measurements.ts';

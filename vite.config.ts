@@ -1,8 +1,12 @@
+/*
+ * Réglages de Vite.
+ * Prépare les moteurs de FleXray pour éviter un rechargement au premier lancement.
+ */
+
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  // Précompiler les deux moteurs avant leur import à la demande évite
-  // un rechargement de la page pendant la première segmentation.
+  // Prépare les deux moteurs dès le démarrage du serveur de développement.
   optimizeDeps: {
     include: ['onnxruntime-web/webgpu', 'onnxruntime-web/wasm'],
   },

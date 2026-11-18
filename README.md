@@ -1,3 +1,7 @@
+<!--
+  Présentation du projet et étapes pour le lancer et l’essayer.
+-->
+
 # OrthoVision
 
 Visionneuse pédagogique de radiographies, en TypeScript sans framework. Les fichiers image importés sont traités dans le navigateur. Le prototype est destiné à l’enseignement et à la recherche et ne doit pas être utilisé pour une décision médicale.

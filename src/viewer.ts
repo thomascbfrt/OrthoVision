@@ -1,8 +1,14 @@
+/*
+ * Affichage de la radio et de ses repères.
+ * Gère le zoom, le déplacement, le dessin des traits et l’export de l’image annotée.
+ */
+
 import type { Point } from './measurements.ts';
 
 const svgNamespace = 'http://www.w3.org/2000/svg';
 const colors = ['#7aedcc', '#ffcf65'];
 
+// Prépare la zone de dessin et relie la souris ou le doigt aux repères de la radio.
 export function createViewer(svg: SVGSVGElement, onChange: () => void) {
   const image = svg.querySelector<SVGImageElement>('.radiograph')!;
   const overlay = svg.querySelector<SVGImageElement>('.overlay')!;
@@ -14,15 +20,18 @@ export function createViewer(svg: SVGSVGElement, onChange: () => void) {
   let pan = false;
   let drag: { id: number; index: number; start: Point } | null = null;
 
+  // Indique quelle partie de la radio doit être visible.
   function applyView() {
     svg.setAttribute('viewBox', [view.x, view.y, view.width, view.height].join(' '));
   }
 
+  // Revient à la vue de départ.
   function reset() {
     view = { x: 0, y: 0, width, height };
     if (width) applyView();
   }
 
+  // Agrandit ou réduit la vue autour du point choisi, sans déplacer les repères sur la radio.
   function zoom(factor: number, center = { x: view.x + view.width / 2, y: view.y + view.height / 2 }) {
     if (!width || view.width * factor > width * 1.01 || view.width * factor < width / 10) return;
     view.x = center.x + (view.x - center.x) * factor;
@@ -32,6 +41,7 @@ export function createViewer(svg: SVGSVGElement, onChange: () => void) {
     applyView();
   }
 
+  // Redessine les points et relie chaque paire pour former un trait.
   function draw() {
     marks.replaceChildren();
     for (let index = 0; index < points.length; index++) {
@@ -62,16 +72,19 @@ export function createViewer(svg: SVGSVGElement, onChange: () => void) {
     onChange();
   }
 
+  // Remplace les repères puis met à jour leur affichage.
   function setPoints(next: Point[]) {
     points = next;
     draw();
   }
 
+  // Convertit la position du clic en coordonnées sur la radio, même après un zoom.
   function imagePoint(event: MouseEvent): Point | null {
     const matrix = svg.getScreenCTM();
     return matrix ? new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse()) : null;
   }
 
+  // Ajoute un point ou commence un déplacement selon l’endroit touché et le mode actif.
   svg.addEventListener('pointerdown', event => {
     if (!width || event.button !== 0 || drag) return;
     const point = imagePoint(event);
@@ -86,6 +99,7 @@ export function createViewer(svg: SVGSVGElement, onChange: () => void) {
     if (drag) svg.setPointerCapture(event.pointerId);
   });
 
+  // Déplace la vue ou le point saisi en suivant le pointeur.
   svg.addEventListener('pointermove', event => {
     if (drag?.id !== event.pointerId) return;
     const point = imagePoint(event);
@@ -102,9 +116,11 @@ export function createViewer(svg: SVGSVGElement, onChange: () => void) {
       draw();
     }
   });
+  // Termine le déplacement quand la visionneuse ne suit plus le pointeur.
   svg.addEventListener('lostpointercapture', event => {
     if (drag?.id === event.pointerId) drag = null;
   });
+  // Zoome avec la molette quand Ctrl ou Cmd est enfoncé.
   svg.addEventListener('wheel', event => {
     if (!width || (!event.ctrlKey && !event.metaKey)) return;
     event.preventDefault();
@@ -112,6 +128,7 @@ export function createViewer(svg: SVGSVGElement, onChange: () => void) {
   }, { passive: false });
 
   return {
+    // Change la radio, ajuste les dimensions et enlève le masque et les anciens points.
     setImage(url: string, size: { width: number; height: number }) {
       ({ width, height } = size);
       for (const layer of [image, overlay]) {
@@ -125,11 +142,13 @@ export function createViewer(svg: SVGSVGElement, onChange: () => void) {
       reset();
       setPoints([]);
     },
+    // Ajoute ou retire le masque superposé à la radio.
     setMask(url: string, opacity: number) {
       if (url) overlay.setAttribute('href', url);
       else overlay.removeAttribute('href');
       overlay.setAttribute('opacity', String(opacity));
     },
+    // Active ou désactive le déplacement de la vue.
     setPan(enabled: boolean) {
       pan = enabled;
       svg.toggleAttribute('data-pan', enabled);
@@ -141,6 +160,7 @@ export function createViewer(svg: SVGSVGElement, onChange: () => void) {
   };
 }
 
+// Dessine une copie de la radio avec son masque et ses repères pour l’export PNG.
 export function annotatedPng(image: HTMLImageElement, points: readonly Point[], mask: HTMLCanvasElement | null, opacity: number) {
   const canvas = document.createElement('canvas');
   canvas.width = image.naturalWidth;

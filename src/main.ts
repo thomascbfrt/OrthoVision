@@ -1,3 +1,8 @@
+/*
+ * Point de départ de l’application.
+ * Relie l’accueil, la visionneuse et la comparaison des deux examens.
+ */
+
 import './style.css';
 import { setupExam } from './exam-panel.ts';
 import { formatAngle } from './measurements.ts';
@@ -5,6 +10,7 @@ import { formatAngle } from './measurements.ts';
 const home = document.querySelector<HTMLElement>('#accueil')!;
 const tool = document.querySelector<HTMLElement>('#outil')!;
 
+// Affiche l’accueil ou la visionneuse selon la fin de l’adresse.
 function showPage(focus: boolean) {
   const openTool = window.location.hash === '#outil';
   home.hidden = openTool;
@@ -26,12 +32,14 @@ const first = addExam('Examen A');
 const second = addExam('Examen B');
 second.element.hidden = true;
 
+// Crée un panneau d’examen à partir du modèle défini dans la page.
 function addExam(title: string) {
   const element = template.content.firstElementChild!.cloneNode(true) as HTMLElement;
   exams.append(element);
   return setupExam(element, title, updateComparison);
 }
 
+// Met à jour les angles et leur écart quand un examen change.
 function updateComparison() {
   const bVisible = !second.element.hidden;
   comparison.hidden = !bVisible;
@@ -43,6 +51,7 @@ function updateComparison() {
   difference.textContent = `A : ${formatAngle(first.angle)} · B : ${formatAngle(second.angle)} · Écart absolu : ${formatAngle(Math.abs(second.angle - first.angle))}`;
 }
 
+// Affiche ou masque le deuxième examen.
 function showCompare(show: boolean) {
   compare.setAttribute('aria-pressed', String(show));
   second.element.hidden = !show;
@@ -50,6 +59,7 @@ function showCompare(show: boolean) {
 }
 
 compare.onclick = () => showCompare(second.element.hidden);
+// Ouvre les deux radiographies fournies en exemple.
 document.querySelector<HTMLButtonElement>('#demo')!.onclick = async () => {
   showCompare(true);
   await Promise.all([
@@ -58,6 +68,7 @@ document.querySelector<HTMLButtonElement>('#demo')!.onclick = async () => {
   ]);
 };
 
+// Rétablit la vue complète des radios avant de lancer l’impression.
 report.onclick = () => {
   first.resetView();
   second.resetView();

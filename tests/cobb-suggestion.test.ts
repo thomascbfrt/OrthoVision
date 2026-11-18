@@ -1,8 +1,14 @@
+/*
+ * Tests de la proposition de repères sur une radio simulée.
+ * Vérifie le recalage sur le bord visible et le cas où le contraste manque.
+ */
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { suggestCobbFromPixels } from '../src/cobb-suggestion.ts';
 import { cobbAngle } from '../src/measurements.ts';
 
+// Construit une fausse radio et des masques décalés pour tester le repérage des bords.
 function sample() {
   const size = 160;
   const centers = [[89, 25], [78, 51], [70, 77], [78, 103], [89, 129]];

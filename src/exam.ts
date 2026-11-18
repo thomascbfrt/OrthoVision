@@ -1,3 +1,8 @@
+/*
+ * Données et fichiers d’un examen.
+ * Prépare les exports et vérifie que les repères importés vont sur la bonne radio.
+ */
+
 import { cobbAngle, type Point } from './measurements.ts';
 
 export interface ExamImage {
@@ -9,6 +14,7 @@ export interface ExamImage {
 
 export type MeasurementMethod = 'manual' | 'assisted';
 
+// Regroupe les points et la mesure pour préparer un fichier JSON.
 export function annotationData(image: ExamImage, points: readonly Point[], method: MeasurementMethod = 'manual') {
   return {
     version: 1,
@@ -24,6 +30,7 @@ export function annotationData(image: ExamImage, points: readonly Point[], metho
   };
 }
 
+// Lit les repères et vérifie qu’ils appartiennent à la radio ouverte.
 export function readAnnotation(text: string, image: ExamImage): { points: Point[]; method: MeasurementMethod } {
   const data = JSON.parse(text);
   if (data?.version !== 1 || data.measurement?.type !== 'cobb' || !Array.isArray(data.points)) {
@@ -43,15 +50,18 @@ export function readAnnotation(text: string, image: ExamImage): { points: Point[
   };
 }
 
+// Calcule une empreinte qui permet de reconnaître le contenu d’un fichier.
 export async function sha256Hex(bytes: BufferSource) {
   const digest = await crypto.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
+// Calcule l’empreinte de la radio pour pouvoir retrouver ses repères.
 export async function imageHash(file: Blob) {
   return sha256Hex(await file.arrayBuffer());
 }
 
+// Lance le téléchargement dans le navigateur et libère ensuite le lien temporaire.
 export function download(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

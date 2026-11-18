@@ -1,3 +1,6 @@
+# Fichiers gardés en local.
+# Les dépendances et les fichiers produits par Vite peuvent être recréés.
+
 node_modules/
 dist/
 .DS_Store

@@ -1,3 +1,8 @@
+/*
+ * Proposition de repères pour mesurer l’angle de Cobb.
+ * Les masques repèrent les vertèbres. La radio sert à chercher leurs bords.
+ */
+
 import type { Segmentation } from './flexray.ts';
 import type { Point } from './measurements.ts';
 
@@ -22,6 +27,7 @@ export interface CobbSuggestion {
   checkEdges: boolean;
 }
 
+// Garde la plus grande zone de pixels reliés et écarte les petits groupes isolés.
 function largestRegion(probabilities: Float32Array, size: number) {
   const visited = new Uint8Array(probabilities.length);
   const queue = new Int32Array(probabilities.length);
@@ -47,6 +53,7 @@ function largestRegion(probabilities: Float32Array, size: number) {
   return largest;
 }
 
+// Repère le centre des vertèbres du thorax et du bas du dos, puis les range dans l’ordre.
 function findVertebrae(segmentation: Segmentation, image: GrayImage) {
   const { probabilities, labels, geometry } = segmentation;
   const size = Math.sqrt(probabilities.length / labels.length);
@@ -81,6 +88,7 @@ function findVertebrae(segmentation: Segmentation, image: GrayImage) {
   return vertebrae.sort((a, b) => a.level - b.level);
 }
 
+// Estime l’inclinaison de chaque vertèbre à partir de ses deux voisines.
 function lineCandidates(vertebrae: Vertebra[]) {
   return vertebrae.filter((vertebra, index) => {
     const previous = vertebrae[index - 1];
@@ -97,6 +105,7 @@ function lineCandidates(vertebrae: Vertebra[]) {
   });
 }
 
+// Lit le niveau de gris d’un pixel, ou indique que le point sort de l’image.
 function intensity(image: GrayImage, point: Point) {
   const x = Math.round(point.x);
   const y = Math.round(point.y);
@@ -104,6 +113,7 @@ function intensity(image: GrayImage, point: Point) {
   return image.pixels[y * image.width + x];
 }
 
+// Cherche un trait qui suit le bord supérieur ou inférieur de la vertèbre.
 function fitEndplate(image: GrayImage, vertebra: Vertebra, edge: 'upper' | 'lower') {
   const { center, region, tilt } = vertebra;
   const cos = Math.cos(tilt);
@@ -126,12 +136,13 @@ function fitEndplate(image: GrayImage, vertebra: Vertebra, edge: 'upper' | 'lowe
   const step = Math.max(1, width / 24);
   const gradientStep = Math.max(1, Math.min(3, width / 18));
 
+  // Replace un point calculé autour de la vertèbre dans les coordonnées de la radio.
   function fromLocal(x: number, y: number): Point {
     return { x: center.x + x * cos - y * sin, y: center.y + x * sin + y * cos };
   }
 
-  // Chercher une droite soutenue par des transitions de luminosité sur la radio.
-  // Le contour du masque limite la zone, l'axe local limite les inclinaisons.
+  // Essaie plusieurs traits près du bord du masque.
+  // Compare la luminosité de chaque côté du trait pour retrouver le bord sur la radio.
   let best: { slope: number; offset: number; score: number; contrast: number; support: number } | undefined;
   for (let slope = -0.45; slope <= 0.451; slope += 0.05) {
     for (let shift = -searchBand; shift <= searchBand; shift += step) {
@@ -165,10 +176,12 @@ function fitEndplate(image: GrayImage, vertebra: Vertebra, edge: 'upper' | 'lowe
   const { slope, offset, contrast, support } = best;
   const points = [fromLocal(start, offset + start * slope), fromLocal(end, offset + end * slope)];
   if (points.some(point => intensity(image, point) === null)) return null;
+  // Signale un trait incertain si le contraste est faible ou si le trait s’éloigne de l’inclinaison estimée.
   const weak = contrast < 6 || support < 0.55 || Math.abs(Math.atan(slope)) > Math.PI / 12;
   return { points, weak };
 }
 
+// Choisit deux vertèbres et renvoie quatre points si les deux bords sont repérés.
 export function suggestCobbFromPixels(segmentation: Segmentation, image: GrayImage): CobbSuggestion | null {
   const candidates = lineCandidates(findVertebrae(segmentation, image));
   let pair: { upper: Vertebra; lower: Vertebra; difference: number } | undefined;
@@ -191,6 +204,7 @@ export function suggestCobbFromPixels(segmentation: Segmentation, image: GrayIma
   };
 }
 
+// Lit les pixels de la radio et remet les points proposés à sa taille d’origine.
 export function suggestCobb(segmentation: Segmentation, image: HTMLImageElement): CobbSuggestion | null {
   const scale = Math.min(1, 2048 / Math.max(image.naturalWidth, image.naturalHeight));
   const canvas = document.createElement('canvas');

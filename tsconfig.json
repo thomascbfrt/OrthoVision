@@ -1,3 +1,8 @@
+/*
+ * Réglages de TypeScript.
+ * Vérifie les fichiers de src. Vite se charge de produire les fichiers du site.
+ */
+
 {
   "compilerOptions": {
     "target": "ES2022",

@@ -1,3 +1,7 @@
+<!--
+  Détails sur le modèle FleXray et la façon dont OrthoVision l’utilise.
+-->
+
 # FleXray
 
 [Code officiel](https://github.com/VictorButoi/FleXray) · [fiche du modèle](https://huggingface.co/VictorButoi/flexray) · [démonstration et manifeste](https://flexray.csail.mit.edu/demo/demo_manifest.json)

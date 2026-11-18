@@ -1,15 +1,24 @@
+/*
+ * Styles de la page.
+ * Organise l’accueil, les commandes, les examens et leur impression.
+ */
+
+/* Réglages communs à l’accueil et à la visionneuse. */
 body { max-width: 76rem; margin: 1.5rem auto; padding: 0 1rem; font: 1rem/1.45 system-ui, sans-serif; }
 button, input, select { font: inherit; }
 [hidden] { display: none !important; }
+/* Limite la largeur du texte et adapte le schéma à l’écran. */
 .home { max-width: 38rem; margin: 2rem auto; }
 .home figure { margin: 1rem 0; }
 .home img { display: block; width: 100%; height: auto; border-radius: .5rem; }
 .home figcaption { margin-top: .4rem; }
 .open-tool { display: inline-block; padding: .6rem 1rem; border: 1px solid currentColor; border-radius: .4rem; font-weight: 600; }
+/* Range les commandes et place les examens côte à côte si l’écran le permet. */
 .controls { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 #exams { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 29rem), 1fr)); gap: 1rem; margin-top: 1rem; }
 .exam { min-width: 0; padding: .75rem; border: 1px solid #bbb; }
 .viewer { display: block; width: 100%; height: min(62vh, 34rem); background: #161616; touch-action: none; }
+/* Le curseur indique si on pose un point ou si on déplace la vue. */
 .viewer[data-ready] { cursor: crosshair; }
 .viewer[data-pan] { cursor: grab; }
 .viewer circle { cursor: move; }
@@ -17,6 +26,7 @@ button, input, select { font: inherit; }
 .result { font-weight: 600; }
 .status, .ai-status { overflow-wrap: anywhere; }
 footer { margin-top: 1rem; }
+/* Prépare le rapport imprimé en masquant les commandes de l’écran. */
 @media print {
   .back-home, .controls, .instruction, .status, .ai-status { display: none !important; }
   body { margin: 0; padding: 0; font-size: 10pt; }

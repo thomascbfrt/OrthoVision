@@ -1,3 +1,8 @@
+/*
+ * Utilisation de FleXray dans le navigateur.
+ * Télécharge le modèle, prépare la radio et transforme les résultats en masques à afficher.
+ */
+
 import type { InferenceSession } from 'onnxruntime-web';
 import gpuWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url';
 import cpuWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url';
@@ -24,24 +29,26 @@ export interface Segmentation {
 let cachedModel: Promise<{ bytes: Uint8Array; labels: string[] }> | undefined;
 let active: { provider: Provider; runtime: Runtime; session: InferenceSession } | undefined;
 
+// Démarre le moteur choisi pour faire tourner le modèle dans le navigateur.
 async function startSession(provider: Provider, bytes: Uint8Array) {
   const runtime = provider === 'webgpu'
     ? await import('onnxruntime-web/webgpu')
     : await import('onnxruntime-web/wasm');
   runtime.env.wasm.numThreads = 1;
-  // Vite précompile les dépendances en développement. Le binaire WASM
-  // n'est alors plus à côté du module JS, donc on lui donne son URL servie.
+  // Donne au moteur l’adresse exacte de son fichier pour que le navigateur le trouve.
   const wasmUrl = provider === 'webgpu' ? gpuWasmUrl : cpuWasmUrl;
   runtime.env.wasm.wasmPaths = { wasm: new URL(wasmUrl, window.location.href).href };
   const session = await runtime.InferenceSession.create(bytes, { executionProviders: [provider] });
   return { provider, runtime, session };
 }
 
+// Raccourcit le message d’erreur et retire les adresses avant l’affichage.
 function errorDetail(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   return message.replace(/https?:\/\/\S+/g, '[URL]').replace(/\s+/g, ' ').trim().slice(0, 300);
 }
 
+// Télécharge le modèle et les noms des structures, puis contrôle l’intégrité du fichier.
 async function fetchModel(status: (message: string) => void) {
   const [response, schema] = await Promise.all([
     fetch(modelUrl),
@@ -75,8 +82,7 @@ async function fetchModel(status: (message: string) => void) {
   return { bytes, labels: labels as string[] };
 }
 
-// Filtre bilinéaire séparable de la démo FleXray. À la réduction, le filtre
-// couvre plusieurs pixels source pour éviter de perdre les détails fins.
+// Redimensionne la radio en combinant les pixels voisins pour préserver les détails.
 function resample(source: Float32Array, width: number, height: number, outWidth: number) {
   const result = new Float32Array(outWidth * height);
   const scale = width / outWidth;
@@ -101,6 +107,7 @@ function resample(source: Float32Array, width: number, height: number, outWidth:
   return result;
 }
 
+// Échange les lignes et les colonnes pour réutiliser le même calcul dans les deux sens.
 function transpose(source: Float32Array, width: number, height: number) {
   const result = new Float32Array(source.length);
   for (let y = 0; y < height; y++) {
@@ -109,6 +116,7 @@ function transpose(source: Float32Array, width: number, height: number) {
   return result;
 }
 
+// Met la radio en gris, ajoute des bordures et l’adapte à la taille attendue par FleXray.
 function prepareImage(image: HTMLImageElement) {
   const scale = Math.min(1, 4096 / Math.max(image.naturalWidth, image.naturalHeight));
   const width = Math.max(1, Math.round(image.naturalWidth * scale));
@@ -135,6 +143,7 @@ function prepareImage(image: HTMLImageElement) {
   const rows = transpose(resample(gray, side, side, size), size, side);
   const input = transpose(resample(rows, side, size, size), size, size);
   const sorted = input.slice().sort();
+  // Trouve une valeur de gris dans les pixels triés pour régler les contrastes.
   function percentile(fraction: number) {
     const index = fraction * (pixels - 1);
     const lower = Math.floor(index);
@@ -147,6 +156,7 @@ function prepareImage(image: HTMLImageElement) {
   return { input, geometry: { width, height, side, left, top } };
 }
 
+// Calcule les zones reconnues sur la radio. Essaie WebAssembly si WebGPU échoue.
 export async function segmentImage(image: HTMLImageElement, status: (message: string) => void): Promise<Segmentation> {
   status('Chargement de FleXray (environ 203 Mo au premier usage)…');
   cachedModel ??= fetchModel(status).catch(error => { cachedModel = undefined; throw error; });
@@ -176,6 +186,7 @@ export async function segmentImage(image: HTMLImageElement, status: (message: st
   throw new Error(`FleXray a échoué. ${errors.join(' · ')}`);
 }
 
+// Colorie les structures choisies et retire les bordures ajoutées avant le calcul.
 export function drawMask(segmentation: Segmentation, selected: number) {
   const { geometry, probabilities, labels } = segmentation;
   const canvas = document.createElement('canvas');

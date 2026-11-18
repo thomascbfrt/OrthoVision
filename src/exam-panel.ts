@@ -1,3 +1,8 @@
+/*
+ * Commandes d’un examen.
+ * Ouvre la radio, relie les boutons à la visionneuse et affiche la mesure.
+ */
+
 import { annotationData, download, imageHash, readAnnotation, type ExamImage, type MeasurementMethod } from './exam.ts';
 import { cobbAngle, formatAngle } from './measurements.ts';
 import { annotatedPng, createViewer } from './viewer.ts';
@@ -5,7 +10,9 @@ import type { Segmentation } from './flexray.ts';
 
 let modelBusy = false;
 
+// Prépare les commandes et les données propres à un examen.
 export function setupExam(element: HTMLElement, title: string, onChange: () => void) {
+  // Recherche un bouton ou un champ à l’intérieur du panneau de cet examen.
   function find<T extends Element>(selector: string) {
     return element.querySelector<T>(selector)!;
   }
@@ -28,6 +35,7 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
   let pointsRevision = 0;
   find('h2').textContent = title;
 
+  // Recalcule l’angle après un changement des repères et rafraîchit la comparaison.
   function updateResult() {
     const points = viewer.points;
     pointsRevision++;
@@ -44,6 +52,7 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
     onChange();
   }
 
+  // Ouvre une radio et remet à zéro les repères de l’image précédente.
   async function open(source: Blob, name: string, id: number) {
     if (!['image/png', 'image/jpeg'].includes(source.type)) throw new Error('Choisissez un fichier PNG ou JPEG.');
     const url = URL.createObjectURL(source);
@@ -51,6 +60,7 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
     next.src = url;
     try {
       const [, sha256] = await Promise.all([next.decode(), imageHash(source)]);
+      // Ignore un chargement terminé trop tard si une autre radio a été demandée.
       if (id !== loadId) return;
       const previous = image;
       image = next;
@@ -74,6 +84,7 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
     }
   }
 
+  // Charge le fichier choisi par l’utilisateur.
   find<HTMLInputElement>('.file').onchange = async event => {
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
@@ -86,17 +97,21 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
       if (id === loadId) status.textContent = 'Impossible de lire cette image PNG ou JPEG.';
     }
   };
+  // Relie les boutons de zoom et de remise à zéro à la visionneuse.
   find<HTMLButtonElement>('.zoom-in').onclick = () => viewer.zoom(0.8);
   find<HTMLButtonElement>('.zoom-out').onclick = () => viewer.zoom(1.25);
   find<HTMLButtonElement>('.reset').onclick = viewer.reset;
+  // Bascule entre le déplacement de la radio et la manipulation des points.
   pan.onclick = () => {
     const enabled = pan.getAttribute('aria-pressed') === 'false';
     pan.setAttribute('aria-pressed', String(enabled));
     viewer.setPan(enabled);
   };
+  // Permet de retirer le dernier point ou tous les repères.
   find<HTMLButtonElement>('.undo').onclick = () => viewer.setPoints(viewer.points.slice(0, -1));
   find<HTMLButtonElement>('.clear').onclick = () => viewer.setPoints([]);
 
+  // Rouvre les repères d’un fichier JSON pour la radio affichée.
   find<HTMLInputElement>('.import input').onchange = async event => {
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
@@ -113,11 +128,13 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
       if (examImage === target) status.textContent = error instanceof SyntaxError ? 'Fichier JSON invalide.' : (error as Error).message;
     }
   };
+  // Télécharge les points et la mesure au format JSON.
   find<HTMLButtonElement>('.json').onclick = () => {
     if (!examImage) return;
     const data = JSON.stringify(annotationData(examImage, viewer.points, measurementMethod), null, 2);
     download(new Blob([data], { type: 'application/json' }), `orthovision-${title.at(-1)}.json`);
   };
+  // Télécharge la radio avec les traits et le masque visible au format PNG.
   find<HTMLButtonElement>('.png').onclick = async () => {
     if (!image) return;
     try {
@@ -127,10 +144,12 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
     }
   };
 
+  // Règle la transparence du masque pour garder la radio visible dessous.
   function updateOpacity() {
     if (mask) viewer.setMask(mask.toDataURL(), Number(opacity.value) / 100);
   }
 
+  // Affiche le masque choisi dans la liste, ou le retire.
   async function selectMask() {
     const current = segmentation;
     const selected = select.value;
@@ -149,6 +168,7 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
   opacity.oninput = updateOpacity;
   select.onchange = selectMask;
 
+  // Réutilise les résultats de FleXray pour la radio ouverte ou lance le modèle.
   async function withPrediction(action: (prediction: Segmentation, target: HTMLImageElement) => Promise<void> | void) {
     const target = image;
     if (!target) return;
@@ -179,6 +199,7 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
     }
   }
 
+  // Prépare la liste des structures et affiche les masques des vertèbres.
   segment.onclick = () => withPrediction(async (prediction, target) => {
     select.replaceChildren(new Option('Masquer', ''), new Option('Toutes les vertèbres', '-1'));
     prediction.labels.forEach((label, index) => {
@@ -193,12 +214,14 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
     if (image === target) aiStatus.textContent = `Masques FleXray (${prediction.provider}).`;
   });
 
+  // Propose quatre points à partir des masques et des bords visibles sur la radio.
   suggest.onclick = () => {
     const revision = pointsRevision;
     const id = loadId;
     return withPrediction(async (prediction, target) => {
       const { suggestCobb } = await import('./cobb-suggestion.ts');
       if (image !== target || loadId !== id) return;
+      // Garde les repères si l’utilisateur les a modifiés pendant le calcul.
       if (pointsRevision !== revision) {
         aiStatus.textContent = 'Tes modifications ont été conservées. Relance la proposition si tu veux les remplacer.';
         return;
@@ -220,8 +243,11 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
   return {
     element,
     resetView: viewer.reset,
+    // Indique si la radio est chargée pour les commandes de comparaison et d’impression.
     get hasImage() { return Boolean(image); },
+    // Donne l’angle actuel à la page de comparaison.
     get angle() { return cobbAngle(viewer.points); },
+    // Ouvre une des radios fournies avec l’application.
     async openExample(filename: string, name: string) {
       const id = ++loadId;
       try {

@@ -23,12 +23,14 @@ button, input, select { font: inherit; }
 .viewer[data-pan] { cursor: grab; }
 .viewer circle { cursor: move; }
 .view-controls, .ai { margin-top: .6rem; }
-.result { font-weight: 600; }
+.result { font-size: 1.2rem; font-weight: 600; margin-bottom: .25rem; }
+.result-note { margin: 0 0 .5rem; }
+.measurement-details { margin-bottom: .75rem; }
 .status, .ai-status { overflow-wrap: anywhere; }
 footer { margin-top: 1rem; }
 /* Prépare le rapport imprimé en masquant les commandes de l’écran. */
 @media print {
-  .back-home, .controls, .instruction, .status, .ai-status { display: none !important; }
+  .back-home, .controls, .instruction, .status, .ai-status, .measurement-details { display: none !important; }
   body { margin: 0; padding: 0; font-size: 10pt; }
   #exams { grid-template-columns: repeat(auto-fit, minmax(8cm, 1fr)); }
   .exam { break-inside: avoid; }

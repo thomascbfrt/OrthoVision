@@ -20,6 +20,8 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
   const status = find<HTMLElement>('.status');
   const aiStatus = find<HTMLElement>('.ai-status');
   const result = find<HTMLElement>('.result');
+  const resultNote = find<HTMLElement>('.result-note');
+  const details = find<HTMLDetailsElement>('.measurement-details');
   const coordinates = find<HTMLElement>('.coordinates');
   const select = find<HTMLSelectElement>('.structures select');
   const opacity = find<HTMLInputElement>('.opacity input');
@@ -32,6 +34,7 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
   let mask: HTMLCanvasElement | null = null;
   let loadId = 0;
   let measurementMethod: MeasurementMethod = 'manual';
+  let proposedEdgeUncertain = false;
   let pointsRevision = 0;
   find('h2').textContent = title;
 
@@ -41,11 +44,16 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
     pointsRevision++;
     if (!points.length && measurementMethod === 'assisted') {
       measurementMethod = 'manual';
+      proposedEdgeUncertain = false;
       aiStatus.textContent = '';
     }
     const angle = cobbAngle(points);
     const value = angle === null ? (points.length === 4 ? 'repères confondus' : '—') : formatAngle(angle);
     result.textContent = `Angle de Cobb ${measurementMethod === 'assisted' ? 'assisté' : 'manuel'} : ${value}`;
+    resultNote.hidden = angle === null || !proposedEdgeUncertain;
+    resultNote.textContent = resultNote.hidden ? '' : 'Mesure à vérifier : un bord n’a pas été repéré avec assez de certitude.';
+    details.hidden = !points.length;
+    if (!points.length) details.open = false;
     coordinates.textContent = points.length
       ? points.map(({ x, y }, i) => `P${i + 1} (${x.toFixed(1)}, ${y.toFixed(1)})`).join(' · ') + ' px'
       : '';
@@ -122,6 +130,7 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
       const { points, method } = readAnnotation(await file.text(), target);
       if (examImage !== target) return;
       measurementMethod = method;
+      proposedEdgeUncertain = false;
       viewer.setPoints(points);
       status.textContent = 'Repères importés.';
     } catch (error) {
@@ -232,11 +241,10 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
         return;
       }
       measurementMethod = 'assisted';
+      proposedEdgeUncertain = proposal.checkEdges;
       viewer.setPoints(proposal.points);
       status.textContent = '';
-      aiStatus.textContent = proposal.checkEdges
-        ? `Paire proposée : ${proposal.upper}–${proposal.lower}. Un trait est incertain. Vérifie les deux bords sur la radio.`
-        : `Paire proposée : ${proposal.upper}–${proposal.lower}. Vérifie les traits et déplace les points si besoin.`;
+      aiStatus.textContent = `Paire proposée : ${proposal.upper}–${proposal.lower}.`;
     });
   };
 

@@ -15,10 +15,10 @@
     <h1>OrthoVision</h1>
     <p>Mesurer la courbure d’une colonne sur une radiographie avec l’angle de Cobb.</p>
 
-    <h2>Que mesurent les deux traits ?</h2>
+    <h2>Que signifie un angle de 42° ?</h2>
     <figure>
       <img src="%BASE_URL%cobb-angle.png" alt="Deux traits suivent les bords des vertèbres aux extrémités d’une courbe. Leur prolongement forme un angle de 42 degrés." width="808" height="374">
-      <figcaption>Sur ce schéma, les deux traits forment un angle de 42°.</figcaption>
+      <figcaption>La courbure est marquée. Si la personne grandit encore, cette mesure aide le médecin à surveiller si elle s’accentue.</figcaption>
     </figure>
     <p>OrthoVision calcule l’angle entre ces deux bords. Tu peux placer les quatre points à la main ou demander à l’outil de te les proposer, puis les corriger sur la radio.</p>
 
@@ -44,7 +44,7 @@
     <section id="comparison" hidden>
       <h2>Comparaison</h2>
       <p id="difference"></p>
-      <p>La projection, le cadrage, le positionnement et les vertèbres choisies peuvent modifier la mesure. Un écart entre les deux angles ne suffit pas à conclure à une évolution.</p>
+      <p>Un écart entre deux mesures ne suffit pas à conclure à une évolution.</p>
     </section>
     <footer><a href="%BASE_URL%examples/sources.txt">Sources des radiographies</a></footer>
   </main>
@@ -83,7 +83,12 @@
       </div>
       <p class="instruction" hidden>Angle de Cobb manuel : placez deux points sur le plateau supérieur de la vertèbre limite haute, puis deux sur le plateau inférieur de la vertèbre limite basse. Faites glisser un point pour le corriger.</p>
       <p class="result" aria-live="polite">Angle de Cobb : —</p>
-      <p class="coordinates"></p>
+      <p class="result-note" role="status" hidden></p>
+      <!-- Les coordonnées restent accessibles à la demande. -->
+      <details class="measurement-details" hidden>
+        <summary>Détails de la mesure</summary>
+        <p class="coordinates"></p>
+      </details>
       <!-- Enregistre les repères ou la radio annotée et rouvre les repères sauvegardés. -->
       <div class="controls exports" hidden>
         <label class="import">Importer les repères JSON <input type="file" accept=".json,application/json"></label>

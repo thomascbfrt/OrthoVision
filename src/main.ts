@@ -48,7 +48,13 @@ function updateComparison() {
     difference.textContent = 'Mesurez un angle sur chaque examen pour afficher l’écart.';
     return;
   }
-  difference.textContent = `A : ${formatAngle(first.angle)} · B : ${formatAngle(second.angle)} · Écart absolu : ${formatAngle(Math.abs(second.angle - first.angle))}`;
+  const gap = second.angle - first.angle;
+  const displayGap = formatAngle(Math.abs(gap));
+  if (displayGap === formatAngle(0)) {
+    difference.textContent = 'Les deux angles mesurés sont identiques à la précision affichée.';
+    return;
+  }
+  difference.textContent = `L’angle mesuré sur la radio B est ${gap > 0 ? 'supérieur' : 'inférieur'} de ${displayGap} à celui de la radio A.`;
 }
 
 // Affiche ou masque le deuxième examen.

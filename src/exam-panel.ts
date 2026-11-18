@@ -1,4 +1,4 @@
-import { annotationData, download, imageHash, readPoints, type ExamImage } from './exam.ts';
+import { annotationData, download, imageHash, readAnnotation, type ExamImage, type MeasurementMethod } from './exam.ts';
 import { cobbAngle, formatAngle } from './measurements.ts';
 import { annotatedPng, createViewer } from './viewer.ts';
 import type { Segmentation } from './flexray.ts';
@@ -17,19 +17,27 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
   const select = find<HTMLSelectElement>('.structures select');
   const opacity = find<HTMLInputElement>('.opacity input');
   const segment = find<HTMLButtonElement>('.segment');
+  const suggest = find<HTMLButtonElement>('.suggest');
   const pan = find<HTMLButtonElement>('.pan');
   let image: HTMLImageElement | undefined;
   let examImage: ExamImage | undefined;
   let segmentation: Segmentation | undefined;
   let mask: HTMLCanvasElement | null = null;
   let loadId = 0;
+  let measurementMethod: MeasurementMethod = 'manual';
+  let pointsRevision = 0;
   find('h2').textContent = title;
 
   function updateResult() {
     const points = viewer.points;
+    pointsRevision++;
+    if (!points.length && measurementMethod === 'assisted') {
+      measurementMethod = 'manual';
+      aiStatus.textContent = '';
+    }
     const angle = cobbAngle(points);
     const value = angle === null ? (points.length === 4 ? 'repères confondus' : '—') : formatAngle(angle);
-    result.textContent = `Angle de Cobb manuel : ${value}`;
+    result.textContent = `Angle de Cobb ${measurementMethod === 'assisted' ? 'assisté' : 'manuel'} : ${value}`;
     coordinates.textContent = points.length
       ? points.map(({ x, y }, i) => `P${i + 1} (${x.toFixed(1)}, ${y.toFixed(1)})`).join(' · ') + ' px'
       : '';
@@ -96,8 +104,9 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
     const target = examImage;
     if (!file || !target) return;
     try {
-      const points = readPoints(await file.text(), target);
+      const { points, method } = readAnnotation(await file.text(), target);
       if (examImage !== target) return;
+      measurementMethod = method;
       viewer.setPoints(points);
       status.textContent = 'Repères importés.';
     } catch (error) {
@@ -106,7 +115,7 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
   };
   find<HTMLButtonElement>('.json').onclick = () => {
     if (!examImage) return;
-    const data = JSON.stringify(annotationData(examImage, viewer.points), null, 2);
+    const data = JSON.stringify(annotationData(examImage, viewer.points, measurementMethod), null, 2);
     download(new Blob([data], { type: 'application/json' }), `orthovision-${title.at(-1)}.json`);
   };
   find<HTMLButtonElement>('.png').onclick = async () => {
@@ -139,39 +148,73 @@ export function setupExam(element: HTMLElement, title: string, onChange: () => v
 
   opacity.oninput = updateOpacity;
   select.onchange = selectMask;
-  segment.onclick = async () => {
+
+  async function withPrediction(action: (prediction: Segmentation, target: HTMLImageElement) => Promise<void> | void) {
     const target = image;
     if (!target) return;
-    if (modelBusy) {
-      aiStatus.textContent = 'Une autre segmentation est en cours.';
-      return;
-    }
-    modelBusy = true;
-    segment.disabled = true;
+    const id = loadId;
+    segment.disabled = suggest.disabled = true;
+    let ownsModel = false;
     try {
-      const { segmentImage } = await import('./flexray.ts');
-      const prediction = await segmentImage(target, message => {
-        if (image === target) aiStatus.textContent = message;
-      });
-      if (image !== target) return;
+      let prediction = segmentation;
+      if (!prediction) {
+        if (modelBusy) {
+          aiStatus.textContent = 'Une autre segmentation est en cours.';
+          return;
+        }
+        modelBusy = ownsModel = true;
+        const { segmentImage } = await import('./flexray.ts');
+        prediction = await segmentImage(target, message => {
+          if (image === target && loadId === id) aiStatus.textContent = message;
+        });
+      }
+      if (image !== target || loadId !== id) return;
       segmentation = prediction;
-      select.replaceChildren(new Option('Masquer', ''), new Option('Toutes les vertèbres', '-1'));
-      prediction.labels.forEach((label, index) => {
-        if (!index) return;
-        const name = label.startsWith('vertebra_') ? `Vertèbre ${label.slice(9).toUpperCase()}` : label.replaceAll('_', ' ');
-        select.add(new Option(name, String(index)));
-      });
-      select.value = '-1';
-      find<HTMLElement>('.structures').hidden = false;
-      find<HTMLElement>('.opacity').hidden = false;
-      await selectMask();
-      if (image === target) aiStatus.textContent = `Masques FleXray (${prediction.provider}). Les points de Cobb se placent à la main.`;
+      await action(prediction, target);
     } catch (error) {
-      if (image === target) aiStatus.textContent = (error as Error).message;
+      if (image === target && loadId === id) aiStatus.textContent = (error as Error).message;
     } finally {
-      modelBusy = false;
-      segment.disabled = false;
+      if (ownsModel) modelBusy = false;
+      segment.disabled = suggest.disabled = false;
     }
+  }
+
+  segment.onclick = () => withPrediction(async (prediction, target) => {
+    select.replaceChildren(new Option('Masquer', ''), new Option('Toutes les vertèbres', '-1'));
+    prediction.labels.forEach((label, index) => {
+      if (!index) return;
+      const name = label.startsWith('vertebra_') ? `Vertèbre ${label.slice(9).toUpperCase()}` : label.replaceAll('_', ' ');
+      select.add(new Option(name, String(index)));
+    });
+    select.value = '-1';
+    find<HTMLElement>('.structures').hidden = false;
+    find<HTMLElement>('.opacity').hidden = false;
+    await selectMask();
+    if (image === target) aiStatus.textContent = `Masques FleXray (${prediction.provider}).`;
+  });
+
+  suggest.onclick = () => {
+    const revision = pointsRevision;
+    const id = loadId;
+    return withPrediction(async (prediction, target) => {
+      const { suggestCobb } = await import('./cobb-suggestion.ts');
+      if (image !== target || loadId !== id) return;
+      if (pointsRevision !== revision) {
+        aiStatus.textContent = 'Tes modifications ont été conservées. Relance la proposition si tu veux les remplacer.';
+        return;
+      }
+      const proposal = suggestCobb(prediction, target);
+      if (!proposal) {
+        aiStatus.textContent = 'Les deux bords n’ont pas pu être repérés. Tu peux placer les points à la main.';
+        return;
+      }
+      measurementMethod = 'assisted';
+      viewer.setPoints(proposal.points);
+      status.textContent = '';
+      aiStatus.textContent = proposal.checkEdges
+        ? `Paire proposée : ${proposal.upper}–${proposal.lower}. Un trait est incertain. Vérifie les deux bords sur la radio.`
+        : `Paire proposée : ${proposal.upper}–${proposal.lower}. Vérifie les traits et déplace les points si besoin.`;
+    });
   };
 
   return {

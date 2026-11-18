@@ -15,10 +15,11 @@ Ouvrir l’adresse affichée dans le terminal. L’accueil explique l’angle de
 
 ## Utiliser la visionneuse
 
-- Ouvrir un PNG ou un JPEG, puis poser quatre points pour tracer deux plateaux vertébraux. Les points restent dans le repère de l’image et peuvent être déplacés après un zoom. Le logiciel affiche le plus petit angle entre les deux droites, de 0 à 90°.
+- Ouvrir un PNG ou un JPEG, puis poser quatre points pour tracer deux plateaux vertébraux. Les points restent dans le repère de l’image et peuvent être déplacés après un zoom. Les traits sont orientés de gauche à droite pour calculer leur écart sans ramener les angles obtus sous 90°.
 - Exporter le PNG annoté ou les repères JSON. Pour rouvrir des repères, ouvrir d’abord le même fichier image, puis importer le JSON.
 - Ouvrir un deuxième examen pour comparer les angles et exporter un rapport via la boîte d’impression du navigateur. L’écart affiché est descriptif : projection, positionnement, cadrage et choix des vertèbres influencent les mesures.
-- Sur une radiographie, **Afficher les masques FleXray** propose une segmentation locale en option. Au premier usage, le navigateur charge environ 203 Mo de poids depuis Hugging Face. Choisir une structure et régler son opacité. La mesure de Cobb et le choix des repères restent manuels.
+- **Proposer une mesure** estime deux vertèbres limites à partir des centres des masques FleXray, puis cherche les bords correspondants dans la radiographie. Les quatre points proposés restent modifiables. La suggestion peut échouer si la radio est recadrée, si des vertèbres manquent ou si les bords sont peu lisibles.
+- **Afficher les masques FleXray** permet de choisir une structure et de régler son opacité. Au premier usage de l’un des deux boutons, le navigateur charge environ 203 Mo de poids depuis Hugging Face.
 
 Les exemples et les outils manuels ne nécessitent aucun accès à Hugging Face. L’IRM et le format DICOM ne sont pas pris en charge. FleXray a été entraîné pour des radiographies conventionnelles. Voir sa [fiche d’intégration](docs/flexray.md).
 

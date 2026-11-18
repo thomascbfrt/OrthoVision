@@ -7,22 +7,24 @@ export interface ExamImage {
   sha256: string;
 }
 
-export function annotationData(image: ExamImage, points: readonly Point[]) {
+export type MeasurementMethod = 'manual' | 'assisted';
+
+export function annotationData(image: ExamImage, points: readonly Point[], method: MeasurementMethod = 'manual') {
   return {
     version: 1,
     image,
     points,
     measurement: {
       type: 'cobb',
-      method: 'manual',
-      algorithm: 'acute-line-angle-v1',
+      method,
+      algorithm: 'left-to-right-angle-v2',
       unit: 'degree',
       value: cobbAngle(points),
     },
   };
 }
 
-export function readPoints(text: string, image: ExamImage): Point[] {
+export function readAnnotation(text: string, image: ExamImage): { points: Point[]; method: MeasurementMethod } {
   const data = JSON.parse(text);
   if (data?.version !== 1 || data.measurement?.type !== 'cobb' || !Array.isArray(data.points)) {
     throw new Error('Format de repères non reconnu.');
@@ -35,7 +37,10 @@ export function readPoints(text: string, image: ExamImage): Point[] {
     point.x < 0 || point.x > image.width || point.y < 0 || point.y > image.height)) {
     throw new Error('Les coordonnées des repères sont invalides.');
   }
-  return data.points.map(({ x, y }: Point) => ({ x, y }));
+  return {
+    points: data.points.map(({ x, y }: Point) => ({ x, y })),
+    method: data.measurement.method === 'assisted' ? 'assisted' : 'manual',
+  };
 }
 
 export async function sha256Hex(bytes: BufferSource) {
